@@ -50,17 +50,41 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
 void init_screen(struct BOOTINFO * binfo);
 
-
+//test functions
+void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 
 void HariMain(void)
 {
+	static char font_A[16] = {
+		0x00, 0x18, 0x18, 0x18, 0x18, 0x24, 0x24, 0x24,
+		0x24, 0x7e, 0x42, 0x42, 0x42, 0xe7, 0x00, 0x00
+	};
+	
 	init_palette();
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	init_screen(binfo);
+	
+	putfont8(binfo->vram,binfo->scrnx,20,20,COL8_848400,font_A);
 fin:
 	io_hlt();
 	goto fin;
 }
+   
+void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font)
+{
+	int i,j,k;
+	for(i = 0; i < 16 ; i++){
+		j = 0x80;
+		for(k = 0 ;k <= 7;k++){
+			if((font[i] & j) != 0){
+				vram[(y + i) * xsize + x + k] = color;
+			}	 
+			j = j >> 1;
+		}		
+	}
+
+}	
+   
    
 void init_palette(void)
 {
