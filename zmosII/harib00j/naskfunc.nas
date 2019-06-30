@@ -9,7 +9,7 @@
 
 [FILE "naskfunc.nas"]			; 文件名
 
-		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli, _io_store_eflag			; c中的函数名，在函数名前加上下??。
+		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli, _io_store_eflags			; c中的函数名，在函数名前加上下??。
 
 ; 以下は実際の関数
 
@@ -21,7 +21,7 @@ _io_hlt:	; void io_hlt(void);
 		
 _io_out8:	;void io_out8(int port,int value);
 		mov edx,[esp + 4]
-		mov eax,[esp + 8]
+		mov al,[esp + 8]
 		out dx,al
 		ret
 _io_load_eflags:  ;int io_load_eflags(void);
@@ -33,7 +33,7 @@ _io_cli:		;void io_cli
 		cli
 		ret
 
-_io_store_eflag:	;void io_store_eflag(int eflags)
+_io_store_eflags:	;void io_store_eflag(int eflags)
 		mov eax,[esp + 4]
 		push eax
 		popfd
