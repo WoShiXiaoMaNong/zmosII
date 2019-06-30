@@ -5,13 +5,13 @@ BOTPAK	EQU		0x00280000		; bootpackのロード先
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
 DSKCAC0	EQU		0x00008000		; ディスクキャッシュの場所（リアルモード）
 
-; BOOT_INFO関係
-CYLS	EQU		0x0ff0			; ブートセクタが設定する
-LEDS	EQU		0x0ff1
-VMODE	EQU		0x0ff2			; 色数に関する情報。何ビットカラーか？
-SCRNX	EQU		0x0ff4			; 解像度のX
-SCRNY	EQU		0x0ff6			; 解像度のY
-VRAM	EQU		0x0ff8			; グラフィックバッファの開始番地
+; BOOT_INFO
+CYLS	EQU		0x0ff0			; ??扇区
+LEDS	EQU		0x0ff1			; ??上的led信息
+VMODE	EQU		0x0ff2			; ?色模式（8位，16位等等）
+SCRNX	EQU		0x0ff4			; 分辨率的x
+SCRNY	EQU		0x0ff6			; 分辨率的
+VRAM	EQU		0x0ff8			; ?存?存的起始地址
 
 		ORG		0xc200			; このプログラムがどこに読み込まれるのか
 
