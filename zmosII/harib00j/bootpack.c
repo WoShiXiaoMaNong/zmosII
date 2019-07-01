@@ -30,6 +30,9 @@ struct BOOTINFO{
 	char *vram;
 };
 
+
+
+
 //nas functions
 void io_hlt(void);
 int io_load_eflags(void);
@@ -50,36 +53,56 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
 void init_screen(struct BOOTINFO * binfo);
 
-//test functions
+
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
+void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
+void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
+
+
 
 void HariMain(void)
 {
-	static char font_A[16] = {
-		0x00, 0x18, 0x18, 0x18, 0x18, 0x24, 0x24, 0x24,
-		0x24, 0x7e, 0x42, 0x42, 0x42, 0xe7, 0x00, 0x00
-	};
-	
 	init_palette();
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	init_screen(binfo);
 	
-	putfont8(binfo->vram,binfo->scrnx,20,20,COL8_848400,font_A);
+	putfont8_string(binfo->vram,binfo->scrnx,20,20,COL8_848400,"Hello world!!!!!");
 fin:
 	io_hlt();
 	goto fin;
 }
+
+void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg)
+{
+	int x_temp = x;
+	while (* msg != '\0'){
+		putfont8_ascii(vram,xsize,x_temp, y,color,*msg);
+		x_temp += 8;
+		msg ++;
+	}
+}
+
+void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii)
+{
+	extern char hankaku[4096];
+	char *font = hankaku + c_ascii * 16;
+	putfont8(vram,xsize,x, y,color,font);
+}
    
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font)
 {
-	int i,j,k;
+	int i,j;
+	char *vram_temp, font_temp;
 	for(i = 0; i < 16 ; i++){
+		vram_temp = &(vram[(y + i) * xsize + x]);
+		font_temp = font[i];
 		j = 0x80;
-		for(k = 0 ;k <= 7;k++){
-			if((font[i] & j) != 0){
-				vram[(y + i) * xsize + x + k] = color;
+		while(j > 0){
+			if((font_temp & j) != 0){
+				*vram_temp = color;
 			}	 
 			j = j >> 1;
+			vram_temp++;
 		}		
 	}
 
