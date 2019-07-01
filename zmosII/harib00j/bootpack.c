@@ -65,8 +65,16 @@ void HariMain(void)
 	init_palette();
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	init_screen(binfo);
+	char s[10];
+	int test = 1;
+	int y = 20;
+	while(test < 10){
+		sprintf(s,"test = %d",test);
+		putfont8_string(binfo->vram,binfo->scrnx,20,y,COL8_FFFF00,s);
+		test ++;
+		y += 16;
+	}
 	
-	putfont8_string(binfo->vram,binfo->scrnx,20,20,COL8_848400,"Hello world!!!!!");
 fin:
 	io_hlt();
 	goto fin;
