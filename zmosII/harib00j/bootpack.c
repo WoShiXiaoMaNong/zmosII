@@ -52,6 +52,7 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
 */
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
 void init_screen(struct BOOTINFO * binfo);
+void init_mouse(unsigned char *vram,int vxsize,int x,int y,unsigned char back_ground_color);
 
 void init_mouse_cursor8(char *mouse,char back_ground_color);
 
@@ -66,32 +67,12 @@ void HariMain(void)
 	init_palette();
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	init_screen(binfo);
+	init_mouse(binfo->vram,binfo->scrnx,100,100,COL8_008484);
+	
 	
 	char s[10];
 	int y = 4;
-	//print mouse test start
-		
-	char mouse[16][16] = {"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000",
-	"0000000000000000"};
 	
-	init_mouse_cursor8(mouse,COL8_008484);
-	putblock8_8(binfo->vram,binfo->scrnx,16,16,100,100, mouse,16);
-
-	//print mouse test end
 		
 	
 	
@@ -110,6 +91,15 @@ fin:
 	io_hlt();
 	goto fin;
 }
+
+void init_mouse(unsigned char *vram,int vxsize,int x,int y,unsigned char back_ground_color)
+{
+	char cursor[16][16];
+	init_mouse_cursor8(cursor,back_ground_color);
+	putblock8_8(vram,vxsize,16,16,x,y,cursor,16);
+}
+
+
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize)
 {
 	int x,y;
