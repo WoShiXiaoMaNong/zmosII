@@ -53,11 +53,12 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
 void init_screen(struct BOOTINFO * binfo);
 
+void init_mouse_cursor8(char *mouse,char back_ground_color);
 
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
-
+void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
 
 
 void HariMain(void)
@@ -65,20 +66,102 @@ void HariMain(void)
 	init_palette();
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	init_screen(binfo);
+	
 	char s[10];
+	int y = 4;
+	//print mouse test start
+		
+	char mouse[16][16] = {"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000",
+	"0000000000000000"};
+	
+	init_mouse_cursor8(mouse,COL8_008484);
+	putblock8_8(binfo->vram,binfo->scrnx,16,16,100,100, mouse,16);
+
+	//print mouse test end
+		
+	
+	
+	//print variable test
 	int test = 1;
-	int y = 20;
+	y = 20;
 	while(test < 10){
-		sprintf(s,"test = %d",test);
+		sprintf(s,"Param = %d",test);
 		putfont8_string(binfo->vram,binfo->scrnx,20,y,COL8_FFFF00,s);
 		test ++;
 		y += 16;
 	}
+	//print variable test end
 	
 fin:
 	io_hlt();
 	goto fin;
 }
+void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize)
+{
+	int x,y;
+	for(y = 0; y < block_y_size; y++){
+		for(x= 0 ; x< block_x_size; x++){
+			vram[(py0 + y) * vxsize + px0 + x] = blockbuf[y * bxsize + x];
+		}
+	}
+}
+
+void init_mouse_cursor8(char *mouse,char back_ground_color)
+{
+	// * = CLO8_000000
+	// O = CLO8_FFFFFF
+	// . = back_groudn_color
+	//cursor size = 16 * 16
+	static char cursor[16][16] = {
+		"**************..",
+		"*ooooooooooo*...",
+		"*oooooooooo*....",
+		"*ooooooooo*.....",
+		"*oooooooo*......",
+		"*ooooooo*.......",
+		"*ooooooo*.......",
+		"*oooooooo*......",
+		"*oooo**ooo*.....",
+		"*ooo*..*ooo*....",
+		"*oo*....*ooo*...",
+		"*o*......*ooo*..",
+		"**........*ooo..",
+		"*..........*ooo*",
+		"............*oo*",
+		".............***"
+		
+	};
+	int x,y;
+	for(y = 0 ; y < 16; y++){
+		for(x = 0 ; x < 16 ; x++){
+			if(cursor[y][x] == '*'){
+				mouse[y * 16 + x] = COL8_000000;
+			}
+			if(cursor[y][x] == 'o'){
+				mouse[y * 16 + x] = COL8_FFFFFF;
+			}
+			if(cursor[y][x] == '.'){
+				mouse[y * 16 + x] = back_ground_color;
+			}
+		}
+	}	
+	
+}
+
 
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg)
 {
