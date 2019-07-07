@@ -10,7 +10,7 @@
 [FILE "naskfunc.nas"]			; 文件名
 
 		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli, _io_store_eflags			; c中的函数名，在函数名前加上下??。
-
+		GLOBAL  _load_gdtr, _load_idtr
 ; 以下は実際の関数
 
 [SECTION .text]	
@@ -38,3 +38,19 @@ _io_store_eflags:	;void io_store_eflag(int eflags)
 		push eax
 		popfd
 		ret
+		
+_load_gdtr: ;void load_gdtr(int limit, int addr);
+	mov ax,[esp + 4]  ;limit
+	mov [esp + 6],ax  ;第一个参数?esp + 4,第二个参数? esp + 8
+	lgdt [esp + 6]    ;limit ?2字?,base addr?4字?,将limit mov到base addr（esp + 8）前面的?个字?（esp + 6）?成lgdt所需要的格式
+	ret
+	
+_load_idtr: ;void load_idtr(lint limit,int addr);
+	mov ax,[esp + 4] ;limit
+	mov [esp + 6],ax ;同load_gdtr
+	lidt [esp + 6]
+	ret
+
+	
+
+		

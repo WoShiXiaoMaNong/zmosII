@@ -57,7 +57,7 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 
 [INSTRSET "i486p"]				; 486の命令まで使いたいという記述
 
-		LGDT	[GDTR0]			; 暫定GDTを設定
+		LGDT	[GDTR0]			; ??GDT?置
 		MOV		EAX,CR0
 		AND		EAX,0x7fffffff	; bit31を0にする（ページング禁止のため）
 		OR		EAX,0x00000001	; bit0を1にする（プロテクトモード移行のため）
