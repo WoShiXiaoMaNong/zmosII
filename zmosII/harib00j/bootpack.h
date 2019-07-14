@@ -15,7 +15,7 @@
 #define COL8_008484		14
 #define COL8_848484		15
 
-
+#define ADDR_BOOTINFO 0x0ff0
 /*; BOOT_INFO
 CYLS	EQU		0x0ff0			; 启动扇区
 LEDS	EQU		0x0ff1			; 键盘上的led信息
@@ -48,11 +48,12 @@ struct GATE_DESCRIPTOR{
 void io_hlt(void);
 int io_load_eflags(void);
 void io_cli(void);
+void io_sti(void);
 void io_store_eflags(int eflags);
 void io_out8(int port,int value);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
-
+void asm_inthandler21(void);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -75,6 +76,27 @@ void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_siz
 void init_gdtidt(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR* gdt,unsigned int limit,int base,int access);
 void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int access);
-
-
-
+#define ADDR_GDT		0x00270000
+#define LIMIT_GDT		0xffff
+#define ADDR_IDT		0x0026f800
+#define LIMIT_IDT		0x7ff
+#define LIMIT_BOOTPACK	0x0007ffff
+#define	ADDR_BOOTPACK	0x00280000
+#define AR_DATA32_RW	0x4092
+#define AR_CODE32_ER	0x409a
+#define AR_INTGATE32	0x008e
+/* int.c */
+void init_pic(void);
+void inthandler21(int *esp);
+#define PIC0_ICW1		0x0020
+#define PIC0_OCW2		0x0020
+#define PIC0_IMR		0x0021
+#define PIC0_ICW2		0x0021
+#define PIC0_ICW3		0x0021
+#define PIC0_ICW4		0x0021
+#define PIC1_ICW1		0x00a0
+#define PIC1_OCW2		0x00a0
+#define PIC1_IMR		0x00a1
+#define PIC1_ICW2		0x00a1
+#define PIC1_ICW3		0x00a1
+#define PIC1_ICW4		0x00a1
