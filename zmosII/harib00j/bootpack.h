@@ -51,9 +51,11 @@ void io_cli(void);
 void io_sti(void);
 void io_store_eflags(int eflags);
 void io_out8(int port,int value);
+char io_in8(int port);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 void asm_inthandler21(void);
+void asm_inthandler2c(void);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -88,6 +90,8 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 /* int.c */
 void init_pic(void);
 void inthandler21(int *esp);
+void inthandler2c(int *esp);
+
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
 #define PIC0_IMR		0x0021
@@ -100,3 +104,4 @@ void inthandler21(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
+#define PORT_KEYDAT     0x0060

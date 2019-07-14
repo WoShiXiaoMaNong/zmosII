@@ -9,13 +9,13 @@
 
 [FILE "naskfunc.nas"]			; 文件名
 
-		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli,_io_sti, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
+		GLOBAL	_io_hlt,_io_out8,_io_in8, _io_load_eflags,_io_cli,_io_sti, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
 		GLOBAL  _load_gdtr, _load_idtr
 		
 		;中断函数
-		GLOBAL _asm_inthandler21
+		GLOBAL _asm_inthandler21, _asm_inthandler2c
 
-		EXTERN _inthandler21
+		EXTERN _inthandler21,_inthandler2c
 		
 ; 以下は実際の関数
 
@@ -30,6 +30,11 @@ _io_out8:	;void io_out8(int port,int value);
 		mov al,[esp + 8]
 		out dx,al
 		ret
+_io_in8:	;char io_in8(int port);
+		mov dx,[esp + 4]
+		in al,dx
+		ret
+		
 _io_load_eflags:  ;int io_load_eflags(void);
 		pushfd
 		pop eax  ;eax 存放返回?
@@ -74,6 +79,22 @@ _asm_inthandler21:
 		POPAD
 		POP		DS
 		POP		ES
-		IRETD	
+		IRETD
+
+_asm_inthandler2c:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler2c
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD		
 
 		
