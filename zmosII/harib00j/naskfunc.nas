@@ -9,7 +9,7 @@
 
 [FILE "naskfunc.nas"]			; 文件名
 
-		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli, _io_store_eflags			; c中的函数名，在函数名前加上下??。
+		GLOBAL	_io_hlt,_io_out8, _io_load_eflags,_io_cli, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
 		GLOBAL  _load_gdtr, _load_idtr
 ; 以下は実際の関数
 
