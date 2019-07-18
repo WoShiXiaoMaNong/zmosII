@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include "bootpack.h"
 
-
-
+extern struct KEYBUF keybuf;
 
 void HariMain(void)
 {
@@ -31,8 +30,26 @@ void HariMain(void)
 	
 	io_out8(PIC0_IMR, 0xf9); /* PIC0(主PIC) 开放IRQ-1 IRQ-2 (11111001) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12 (11101111) */
-fin:
-	io_hlt();
-	goto fin;
+	
+	unsigned data;
+	int keyBufDataIndex;
+	while(1){
+		io_cli();
+		if(keybuf.next == 0){
+			io_stihlt();
+		}else{
+			data = keybuf.data[0];
+			keybuf.next --;
+			for(keyBufDataIndex = 0 ; keyBufDataIndex < keybuf.next ;keyBufDataIndex ++){
+				keybuf.data[keyBufDataIndex] = keybuf.data[keyBufDataIndex + 1];
+			}
+			io_sti();
+			boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 16, 15,31);
+	
+			sprintf(s,"%02X",data);
+			putfont8_string(binfo->vram,binfo->scrnx,0,16,COL8_FFFF00,s );
+			
+		}
+	}
 }
 

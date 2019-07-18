@@ -1,5 +1,9 @@
 #include "bootpack.h"
 
+#define PORT_KEYDAT     0x0060
+
+
+struct KEYBUF keybuf;
 
 /*
  *初始化PIC，固定配置
@@ -32,16 +36,16 @@ void init_pic(void)
 //Keyboard
 void inthandler21(int *esp)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
-	unsigned char data, s[4];
+	unsigned char data;
 	
 	io_out8(PIC0_OCW2,0x60 + 1); //通知PIC IRQ-1 中断处理完毕。
 	data = io_in8(PORT_KEYDAT);
-	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 16, 15,31);
 	
-	sprintf(s,"%02X",data);
-	putfont8_string(binfo->vram,binfo->scrnx,0,16,COL8_FFFF00,s );
-	
+	if(keybuf.next == 0){
+		keybuf.data[keybuf.next] = data;
+		keybuf.next ++;
+	}
+	return;
 }
 
 void inthandler2c(int *esp)

@@ -46,6 +46,7 @@ struct GATE_DESCRIPTOR{
 
 //nas functions
 void io_hlt(void);
+void io_stihlt(void);
 int io_load_eflags(void);
 void io_cli(void);
 void io_sti(void);
@@ -87,7 +88,13 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 #define AR_DATA32_RW	0x4092
 #define AR_CODE32_ER	0x409a
 #define AR_INTGATE32	0x008e
+
+
 /* int.c */
+struct KEYBUF{
+	unsigned char data[32];
+	int next;
+};
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler2c(int *esp);
@@ -104,4 +111,3 @@ void inthandler2c(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
-#define PORT_KEYDAT     0x0060
