@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "bootpack.h"
 
-extern struct KEYBUF keybuf;
+extern struct FIFO8 keyfifo;
 
 void HariMain(void)
 {
@@ -16,17 +16,8 @@ void HariMain(void)
 	
 	
 	char s[10];
-	int y = 4;
-	//print variable test
-	int test = 1;
-	y = 20;
-	while(test < 10){
-		sprintf(s,"Para = %d",test);
-		putfont8_string(binfo->vram,binfo->scrnx,20,y,COL8_FFFF00,s);
-		test ++;
-		y += 16;
-	}
-	//print variable test end
+	unsigned char keybuff[36];
+	fifo8_init(&keyfifo,keybuff,36);
 	
 	io_out8(PIC0_IMR, 0xf9); /* PIC0(主PIC) 开放IRQ-1 IRQ-2 (11111001) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12 (11101111) */
@@ -35,14 +26,10 @@ void HariMain(void)
 	int keyBufDataIndex;
 	while(1){
 		io_cli();
-		if(keybuf.next == 0){
+		if(fifo8_status(&keyfifo) == 0){
 			io_stihlt();
 		}else{
-			data = keybuf.data[0];
-			keybuf.next --;
-			for(keyBufDataIndex = 0 ; keyBufDataIndex < keybuf.next ;keyBufDataIndex ++){
-				keybuf.data[keyBufDataIndex] = keybuf.data[keyBufDataIndex + 1];
-			}
+			data = fifo8_get(&keyfifo);
 			io_sti();
 			boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 16, 15,31);
 	

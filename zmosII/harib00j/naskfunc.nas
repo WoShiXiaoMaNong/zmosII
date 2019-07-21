@@ -25,15 +25,18 @@
 _io_hlt:	; void io_hlt(void);
 		HLT
 		RET
+		
 _io_stihlt:
 		STI
 		HLT
 		RET
+		
 _io_out8:	;void io_out8(int port,int value);
 		mov edx,[esp + 4]
 		mov al,[esp + 8]
 		out dx,al
 		ret
+		
 _io_in8:	;char io_in8(int port);
 		mov dx,[esp + 4]
 		in al,dx

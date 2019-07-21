@@ -42,7 +42,10 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
-
+struct FIFO8{
+	unsigned char *buf;
+	int p,q,size,free,flags;	
+};
 
 //nas functions
 void io_hlt(void);
@@ -91,10 +94,6 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 
 
 /* int.c */
-struct KEYBUF{
-	unsigned char data[32];
-	int next;
-};
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler2c(int *esp);
@@ -111,3 +110,13 @@ void inthandler2c(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
+
+
+
+/*FIFO.c */
+
+void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
+int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
+int fifo8_get(struct FIFO8 *fifo8);
+int fifo8_status(struct FIFO8 *fifo8);
+
