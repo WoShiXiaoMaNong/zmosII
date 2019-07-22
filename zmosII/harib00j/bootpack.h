@@ -1,3 +1,6 @@
+#ifndef _BOOTPACK_H
+#define _BOOTPACK_H
+
 #define COL8_000000		0
 #define COL8_FF0000		1
 #define COL8_00FF00		2
@@ -14,6 +17,22 @@
 #define COL8_840084		13
 #define COL8_008484		14
 #define COL8_848484		15
+
+
+/*Keyboard & Mouse start */
+#define PORT_KEYDAT     		0x0060
+#define PORT_KEYSTA     		0x0064
+#define PORT_KEYCMD     		0x0064
+#define KEYSTA_SEND_NOTREADY   0x02
+#define KEYCMD_WRITE_MODE     	0x60
+#define KBC_MODE     			0x47
+#define KEYCMD_SENDTO_MOUSE		0xd4
+#define MOUSECMD_ENABLE			0xf4
+/*Keyboard & Mouse end   */
+
+
+
+
 
 #define ADDR_BOOTINFO 0x0ff0
 /*; BOOT_INFO
@@ -120,3 +139,4 @@ int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
 int fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
 
+#endif
