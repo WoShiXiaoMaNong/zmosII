@@ -4,6 +4,12 @@
 extern struct FIFO8 keyfifo;
 extern struct FIFO8 mousefifo;
 
+
+struct MOUSE_DESC{
+	unsigned char buf[3],phase;
+	int x,y,btn;
+};
+
 void wait_KBC_sendready(void)
 {
 	for(;;){
@@ -25,19 +31,60 @@ void init_keyboard(void)
 	return;
 }
 
-void enable_mouse(void)
+void enable_mouse(struct MOUSE_DESC *mdec)
 {
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD,KEYCMD_SENDTO_MOUSE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT,MOUSECMD_ENABLE);
+	mdec->phase = 0;
 	return;
+}
+
+
+int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data)
+{
+		if(mdec->phase == 0){
+			if(data == 0xfa){
+				mdec->phase = 1;
+				return 0;
+			}
+		}else if(mdec->phase == 1){
+			if( (data & 0xc8) == 0x08){
+				mdec->buf[0] = data;
+				mdec->phase = 2;
+			}
+			return 0;
+	    }else if(mdec->phase == 2){
+	    	mdec->buf[1] = data;
+	    	mdec->phase = 3;
+			return 0;
+	    }else if(mdec->phase == 3){
+	    	mdec->buf[2] = data;
+	    	mdec->phase = 1;
+			/*开始解析鼠标的信息*/
+			mdec->btn = mdec->buf[0] & 0x07; //0x07 = 0000_0111B,鼠标状态被存放在buf[0]的低三位。
+			mdec->x = mdec->buf[1];
+			mdec->y = mdec->buf[2];
+			
+			if( (mdec->buf[0] & 0x10) != 0){
+				mdec->x |= 0xffffff00;
+			}
+			if( (mdec->buf[0] & 0x20) != 0){
+				mdec->y |= 0xffffff00;
+			}
+			
+			mdec->y = -mdec->y;
+			return 1;
+		}
+	return -1;
 }
 
 
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
+	struct MOUSE_DESC mdec;
 	char s[10];
 	unsigned char keybuff[36],mousebuff[36];
 	
@@ -45,7 +92,7 @@ void HariMain(void)
 	init_pic();
 	
 	init_keyboard();
-	enable_mouse();
+	enable_mouse(&mdec);
 	io_sti();
 	init_palette();
 	init_screen(binfo);
@@ -61,6 +108,9 @@ void HariMain(void)
 	
 	unsigned data;
 	int keyBufDataIndex;
+	
+	unsigned char mouse_data_buf[3], mouse_phase;
+	mouse_phase = 0;
 	while(1){
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
@@ -76,10 +126,23 @@ void HariMain(void)
 			}else if( fifo8_status(&mousefifo) != 0){
 				data = fifo8_get(&mousefifo);
 				io_sti();
-			
-				boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 32, 16, 47,31);
-				sprintf(s,"%02X",data);
-				putfont8_string(binfo->vram,binfo->scrnx,32,16,COL8_FFFFFF,s );
+				
+				if( mouse_decode(&mdec, data) == 1){
+					sprintf(s,"[lcr %4d %4d]",mdec.x,mdec.y);
+					
+					if( (mdec.btn & 0x01) != 0){
+						s[1] = 'L';
+					}
+					if( (mdec.btn & 0x02) != 0){
+						s[3] = 'R';
+					}
+					if( (mdec.btn & 0x04) != 0){
+						s[2] = 'C';
+					}
+					
+					boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 32, 16, 32 + 15* 8 -1,31);
+					putfont8_string(binfo->vram,binfo->scrnx,32,16,COL8_FFFFFF,s );
+				}
 			}
 		}
 	}
