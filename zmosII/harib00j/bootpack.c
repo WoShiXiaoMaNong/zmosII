@@ -16,6 +16,10 @@ void HariMain(void)
 	init_gdtidt();
 	init_pic();
 	
+	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
+	io_out8(PIC0_IMR, 0xf9); /* PIC0(主PIC) 开放IRQ-1(键盘) IRQ-2(链接 从PIC) (11111001) */
+	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (11101111) */
+	
 	init_keyboard();
 	enable_mouse(&mdec);
 	io_sti();
@@ -39,8 +43,6 @@ void HariMain(void)
 	
 	
 	
-	io_out8(PIC0_IMR, 0xf9); /* PIC0(主PIC) 开放IRQ-1 IRQ-2 (11111001) */
-	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12 (11101111) */
 	
 	unsigned data;
 	int keyBufDataIndex;
