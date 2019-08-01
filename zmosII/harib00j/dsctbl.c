@@ -22,7 +22,11 @@ void init_gdtidt(void)
 	for(i = 0 ; i < 256; i++){
 		set_gatedesc(idt + i,0,0,0);
 	}
+	
+	/*设置21号中断，键盘中断 */
 	set_gatedesc(idt + 0x21,(int)asm_inthandler21,2 * 8,AR_INTGATE32);
+	
+	/*设置2c号中断，鼠标中断 */
 	set_gatedesc(idt + 0x2c,(int)asm_inthandler2c,2 * 8,AR_INTGATE32);
 	
 	load_idtr(LIMIT_IDT, ADDR_IDT);/*limit = 0x7ff (256(idt count) * 8(gdt size) ),base addr = 0x0026f800*/

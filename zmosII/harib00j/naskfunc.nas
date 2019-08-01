@@ -10,6 +10,7 @@
 [FILE "naskfunc.nas"]			; 文件名
 
 		GLOBAL	_io_hlt,_io_out8,_io_in8, _io_load_eflags,_io_cli,_io_sti, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
+		GLOBAL  _io_stihlt
 		GLOBAL  _load_gdtr, _load_idtr
 		
 		;中断函数
@@ -25,11 +26,17 @@ _io_hlt:	; void io_hlt(void);
 		HLT
 		RET
 		
+_io_stihlt:
+		STI
+		HLT
+		RET
+		
 _io_out8:	;void io_out8(int port,int value);
 		mov edx,[esp + 4]
 		mov al,[esp + 8]
 		out dx,al
 		ret
+		
 _io_in8:	;char io_in8(int port);
 		mov dx,[esp + 4]
 		in al,dx

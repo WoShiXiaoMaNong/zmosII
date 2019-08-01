@@ -1,3 +1,6 @@
+#ifndef _BOOTPACK_H
+#define _BOOTPACK_H
+
 #define COL8_000000		0
 #define COL8_FF0000		1
 #define COL8_00FF00		2
@@ -14,6 +17,22 @@
 #define COL8_840084		13
 #define COL8_008484		14
 #define COL8_848484		15
+
+
+/*Keyboard & Mouse start */
+#define PORT_KEYDAT     		0x0060
+#define PORT_KEYSTA     		0x0064
+#define PORT_KEYCMD     		0x0064
+#define KEYSTA_SEND_NOTREADY   0x02
+#define KEYCMD_WRITE_MODE     	0x60
+#define KBC_MODE     			0x47
+#define KEYCMD_SENDTO_MOUSE		0xd4
+#define MOUSECMD_ENABLE			0xf4
+/*Keyboard & Mouse end   */
+
+
+
+
 
 #define ADDR_BOOTINFO 0x0ff0
 /*; BOOT_INFO
@@ -42,10 +61,14 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
-
+struct FIFO8{
+	unsigned char *buf;
+	int p,q,size,free,flags;	
+};
 
 //nas functions
 void io_hlt(void);
+void io_stihlt(void);
 int io_load_eflags(void);
 void io_cli(void);
 void io_sti(void);
@@ -67,7 +90,6 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
 */
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
 void init_screen(struct BOOTINFO * binfo);
-void init_mouse(unsigned char *vram,int vxsize,int x,int y,unsigned char back_ground_color);
 void init_mouse_cursor8(char *mouse,char back_ground_color);
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
@@ -87,6 +109,8 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 #define AR_DATA32_RW	0x4092
 #define AR_CODE32_ER	0x409a
 #define AR_INTGATE32	0x008e
+
+
 /* int.c */
 void init_pic(void);
 void inthandler21(int *esp);
@@ -104,4 +128,14 @@ void inthandler2c(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
-#define PORT_KEYDAT     0x0060
+
+
+
+/*FIFO.c */
+
+void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
+int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
+int fifo8_get(struct FIFO8 *fifo8);
+int fifo8_status(struct FIFO8 *fifo8);
+
+#endif
