@@ -13,6 +13,7 @@ void init_gdtidt(void)
 	for(i = 0 ; i<8192 ; i++){
 		set_segmdesc(gdt + i,0,0,0);
 	}
+	/*0# gdt 一般不做设置*/
 	set_segmdesc(gdt + 1,0xffffffff,0x00000000,AR_DATA32_RW);//1# 即 1_000b 0~4G内存
 	set_segmdesc(gdt + 2,LIMIT_BOOTPACK,ADDR_BOOTPACK,AR_CODE32_ER);//2# 0x00280000 ~ 0x0007ffff:asmhead.nas预留空间
 	

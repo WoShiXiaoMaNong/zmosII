@@ -66,6 +66,18 @@ struct FIFO8{
 	int p,q,size,free,flags;	
 };
 
+
+//bootpack.h
+struct MOUSE_DESC{
+	unsigned char buf[3],phase;
+	int x,y,btn;
+};
+int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
+void enable_mouse(struct MOUSE_DESC *mdec);
+void init_keyboard(void);
+void wait_KBC_sendready(void);
+
+
 //nas functions
 void io_hlt(void);
 void io_stihlt(void);

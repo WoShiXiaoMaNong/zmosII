@@ -5,82 +5,6 @@ extern struct FIFO8 keyfifo;
 extern struct FIFO8 mousefifo;
 
 
-struct MOUSE_DESC{
-	unsigned char buf[3],phase;
-	int x,y,btn;
-};
-
-void wait_KBC_sendready(void)
-{
-	for(;;){
-		/*io_in8(PORT)KEYSTA) will return 0x10 If keyboard is not reay*/
-		if( (io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0){
-			break;
-		}
-	}
-	return;
-}
-
-
-void init_keyboard(void)
-{
-	wait_KBC_sendready();
-	io_out8(PORT_KEYCMD,KEYCMD_WRITE_MODE);
-	wait_KBC_sendready();
-	io_out8(PORT_KEYDAT,KBC_MODE);
-	return;
-}
-
-void enable_mouse(struct MOUSE_DESC *mdec)
-{
-	wait_KBC_sendready();
-	io_out8(PORT_KEYCMD,KEYCMD_SENDTO_MOUSE);
-	wait_KBC_sendready();
-	io_out8(PORT_KEYDAT,MOUSECMD_ENABLE);
-	mdec->phase = 0;
-	return;
-}
-
-
-int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data)
-{
-		if(mdec->phase == 0){
-			if(data == 0xfa){
-				mdec->phase = 1;
-				return 0;
-			}
-		}else if(mdec->phase == 1){
-			if( (data & 0xc8) == 0x08){
-				mdec->buf[0] = data;
-				mdec->phase = 2;
-			}
-			return 0;
-	    }else if(mdec->phase == 2){
-	    	mdec->buf[1] = data;
-	    	mdec->phase = 3;
-			return 0;
-	    }else if(mdec->phase == 3){
-	    	mdec->buf[2] = data;
-	    	mdec->phase = 1;
-			/*开始解析鼠标的信息*/
-			mdec->btn = mdec->buf[0] & 0x07; //0x07 = 0000_0111B,鼠标状态被存放在buf[0]的低三位。
-			mdec->x = mdec->buf[1];
-			mdec->y = mdec->buf[2];
-			
-			if( (mdec->buf[0] & 0x10) != 0){
-				mdec->x |= 0xffffff00;
-			}
-			if( (mdec->buf[0] & 0x20) != 0){
-				mdec->y |= 0xffffff00;
-			}
-			
-			mdec->y = -mdec->y;
-			return 1;
-		}
-	return -1;
-}
-
-
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
@@ -155,7 +79,7 @@ void HariMain(void)
 					boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 32, 16, 32 + 15* 8 -1,31);
 					putfont8_string(binfo->vram,binfo->scrnx,32,16,COL8_FFFFFF,s );
 					
-					
+					/*repaint mouse ---> Mouse move!!!*/
 					boxfill8(binfo->vram, binfo->scrnx, COL8_008484,  mx,         my,          mx + 15, my + 15);
 					mx += mdec.x;
 					my += mdec.y;
@@ -166,5 +90,79 @@ void HariMain(void)
 			}
 		}
 	}
+}
+
+
+
+
+
+void wait_KBC_sendready(void)
+{
+	for(;;){
+		/*io_in8(PORT)KEYSTA) will return 0x10 If keyboard is not reay*/
+		if( (io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0){
+			break;
+		}
+	}
+	return;
+}
+
+
+void init_keyboard(void)
+{
+	wait_KBC_sendready();
+	io_out8(PORT_KEYCMD,KEYCMD_WRITE_MODE);
+	wait_KBC_sendready();
+	io_out8(PORT_KEYDAT,KBC_MODE);
+	return;
+}
+
+void enable_mouse(struct MOUSE_DESC *mdec)
+{
+	wait_KBC_sendready();
+	io_out8(PORT_KEYCMD,KEYCMD_SENDTO_MOUSE);
+	wait_KBC_sendready();
+	io_out8(PORT_KEYDAT,MOUSECMD_ENABLE);
+	mdec->phase = 0;
+	return;
+}
+
+
+int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data)
+{
+		if(mdec->phase == 0){
+			if(data == 0xfa){
+				mdec->phase = 1;
+				return 0;
+			}
+		}else if(mdec->phase == 1){
+			if( (data & 0xc8) == 0x08){
+				mdec->buf[0] = data;
+				mdec->phase = 2;
+			}
+			return 0;
+	    }else if(mdec->phase == 2){
+	    	mdec->buf[1] = data;
+	    	mdec->phase = 3;
+			return 0;
+	    }else if(mdec->phase == 3){
+	    	mdec->buf[2] = data;
+	    	mdec->phase = 1;
+			/*开始解析鼠标的信息*/
+			mdec->btn = mdec->buf[0] & 0x07; //0x07 = 0000_0111B,鼠标状态被存放在buf[0]的低三位。
+			mdec->x = mdec->buf[1];
+			mdec->y = mdec->buf[2];
+			
+			if( (mdec->buf[0] & 0x10) != 0){
+				mdec->x |= 0xffffff00;
+			}
+			if( (mdec->buf[0] & 0x20) != 0){
+				mdec->y |= 0xffffff00;
+			}
+			
+			mdec->y = -mdec->y;
+			return 1;
+		}
+	return -1;
 }
 
