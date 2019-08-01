@@ -87,6 +87,7 @@ void HariMain(void)
 	struct MOUSE_DESC mdec;
 	char s[10];
 	unsigned char keybuff[36],mousebuff[36];
+	char cursor[16][16];
 	
 	init_gdtidt();
 	init_pic();
@@ -96,7 +97,18 @@ void HariMain(void)
 	io_sti();
 	init_palette();
 	init_screen(binfo);
-	init_mouse(binfo->vram,binfo->scrnx,100,100,COL8_008484);
+	
+	
+	/* init mouse start */
+	int mx,my;
+	mx = binfo->scrnx / 2 - 16;
+	my = binfo->scrny / 2 - 16;
+	
+	init_mouse_cursor8(cursor,COL8_008484);
+	putblock8_8(binfo->vram,binfo->scrnx,16,16,mx,my,cursor,16);
+	/* init mouse end */
+	
+	
 	fifo8_init(&keyfifo,keybuff,36);
 	fifo8_init(&mousefifo,mousebuff,36);
 	
@@ -142,6 +154,14 @@ void HariMain(void)
 					
 					boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 32, 16, 32 + 15* 8 -1,31);
 					putfont8_string(binfo->vram,binfo->scrnx,32,16,COL8_FFFFFF,s );
+					
+					
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484,  mx,         my,          mx + 15, my + 15);
+					mx += mdec.x;
+					my += mdec.y;
+					putblock8_8(binfo->vram,binfo->scrnx,16,16,mx,my,cursor,16);
+					
+					
 				}
 			}
 		}

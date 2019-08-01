@@ -1,12 +1,5 @@
 #include "bootpack.h"
 
-void init_mouse(unsigned char *vram,int vxsize,int x,int y,unsigned char back_ground_color)
-{
-	char cursor[16][16];
-	init_mouse_cursor8(cursor,back_ground_color);
-	putblock8_8(vram,vxsize,16,16,x,y,cursor,16);
-}
-
 
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize)
 {
