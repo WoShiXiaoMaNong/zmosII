@@ -3,6 +3,41 @@
 
 
 
+unsigned int memtest_sub(unsigned int start, unsigned int end)
+{
+	unsigned int i = 0, *addr, origin_value, test_value1 = 0xaa55aa55, test_value2 = 0x55aa55aa;
+	
+	for(i = start ; i < end ; i += 4){
+		addr = (unsigned int *)i;
+		origin_value = *addr;
+		*addr = test_value1;
+		*addr ^= 0xffffffff;
+		
+		if(*addr != test_value2) {
+not_memory:
+			*addr = origin_value;
+			break;
+		}
+		
+		*addr ^= 0xffffffff;
+		
+		if(*addr != test_value1){
+			goto not_memory;
+		}
+		
+		*addr = origin_value;
+		
+	}
+	return i;
+}
+unsigned int memtest(unsigned int start, unsigned int end)
+{
+	return memtest_sub(start, end);
+}
+
+
+
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
@@ -35,6 +70,10 @@ void HariMain(void)
 	putblock8_8(binfo->vram,binfo->scrnx,16,16,mx,my,cursor,16);
 	/* init mouse end */
 	
+	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
+	sprintf(s,"Memory : %dMB",memsize);
+	putfont8_string(binfo->vram,binfo->scrnx,0,50,COL8_FFFFFF,s );
+	
 	unsigned data;
 	int keyBufDataIndex;
 	unsigned char mouse_data_buf[3], mouse_phase;
@@ -48,7 +87,7 @@ void HariMain(void)
 				data = fifo8_get(&keyfifo);
 				io_sti();
 			
-				boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 16, 15,31);
+				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15,31);
 				sprintf(s,"%02X",data);
 				putfont8_string(binfo->vram,binfo->scrnx,0,16,COL8_FFFFFF,s );
 			}else if( fifo8_status(&mousefifo) != 0){
@@ -68,7 +107,7 @@ void HariMain(void)
 						s[2] = 'C';
 					}
 					
-					boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 32, 16, 32 + 15* 8 -1,31);
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 32 + 15* 8 -1,31);
 					putfont8_string(binfo->vram,binfo->scrnx,32,16,COL8_FFFFFF,s );
 					
 					/*repaint mouse ---> Mouse move!!!*/
