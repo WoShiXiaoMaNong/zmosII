@@ -66,6 +66,9 @@ struct FIFO8{
 	int p,q,size,free,flags;	
 };
 
+
+
+
 //nas functions
 void io_hlt(void);
 void io_stihlt(void);
@@ -77,8 +80,11 @@ void io_out8(int port,int value);
 char io_in8(int port);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
+int load_cr0(void);
+void store_cr0(int cr0); 
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
+int memtest_sub(unsigned start,unsigned end);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -113,8 +119,8 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 
 /* int.c */
 void init_pic(void);
-void inthandler21(int *esp);
-void inthandler2c(int *esp);
+
+
 
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
@@ -137,5 +143,21 @@ void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
 int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
 int fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+/*mouse.c*/
+struct MOUSE_DESC{
+	unsigned char buf[3],phase;
+	int x,y,btn;
+};
+void inthandler2c(int *esp);
+int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
+void enable_mouse(struct MOUSE_DESC *mdec);
+extern struct FIFO8 mousefifo;
+
+/*keyboard.c*/
+void init_keyboard(void);
+void wait_KBC_sendready(void);
+void inthandler21(int *esp);
+extern struct FIFO8 keyfifo;
 
 #endif

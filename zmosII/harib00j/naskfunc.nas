@@ -11,7 +11,9 @@
 
 		GLOBAL	_io_hlt,_io_out8,_io_in8, _io_load_eflags,_io_cli,_io_sti, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
 		GLOBAL  _io_stihlt
-		GLOBAL  _load_gdtr, _load_idtr
+		GLOBAL  _load_gdtr, _load_idtr, _load_cr0, _store_cr0
+		GLOBAL  _memtest_sub
+		
 		
 		;中断函数
 		GLOBAL _asm_inthandler21, _asm_inthandler2c
@@ -60,6 +62,16 @@ _io_store_eflags:	;void io_store_eflag(int eflags)
 		popfd
 		ret
 		
+_load_cr0:
+		mov eax,cr0
+		ret
+
+_store_cr0:
+		mov eax,[esp + 4]
+		mov cr0,eax
+		ret
+
+	
 _load_gdtr: ;void load_gdtr(int limit, int addr);
 	mov ax,[esp + 4]  ;limit
 	mov [esp + 6],ax  ;第一个参数?esp + 4,第二个参数? esp + 8
@@ -103,5 +115,41 @@ _asm_inthandler2c:
 		POP		DS
 		POP		ES
 		IRETD		
+
+_memtest_sub: ; int memtest_sub(unsigned start,unsigned end);
+		PUSH EDI
+		PUSH ESI
+		PUSH EBX
+		MOV ESI,0xaa55aa55
+		MOV EDI,0x55aa55aa
+		MOV EAX,[ESP + 4*3 + 4]  ;由于前面有三次push，所有esp增?了 4 * 3 个字?。
+		
+	mts_loop:
+		MOV EBX,EAX
+		ADD EBX,0xffc   ;addr
+		MOV EDX,[EBX]   ;origin value
+		MOV [EBX],ESI   ;WRITE VALUE
+		XOR dword [EBX],0xffffffff
+		cmp edi,[ebx]
+		jnz mts_fin
+		xor dword [ebx],0xffffffff
+		cmp esi,[ebx]
+		jnz mts_fin
+		
+		mov [ebx],edx
+		add eax,0x1000
+		cmp eax,[esp + 12 + 8]
+		jbe mts_loop
+		pop ebx
+		pop esi
+		pop edi
+		ret		
+		
+	mts_fin:
+		mov [ebx],edx
+		pop ebx
+		pop esi
+		pop edi
+		ret
 
 		

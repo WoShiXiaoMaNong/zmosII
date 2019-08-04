@@ -1,7 +1,7 @@
 ; haribote-os boot asm
 ; TAB=4
 
-BOTPAK	EQU		0x00280000		; bootpackのロード先
+BOTPAK	EQU		0x00280000		; bootpack的装?地址
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
 DSKCAC0	EQU		0x00008000		; ディスクキャッシュの場所（リアルモード）
 
@@ -15,7 +15,7 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 
 		ORG		0xc200			; このプログラムがどこに読み込まれるのか
 
-; 画面モードを設定
+; ?示?定
 
 		MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
 		MOV		AH,0x00
@@ -31,19 +31,18 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 		INT		0x16 			; keyboard BIOS
 		MOV		[LEDS],AL
 
-; PICが一切の割り込みを受け付けないようにする
-;	AT互換機の仕様では、PICの初期化をするなら、
-;	こいつをCLI前にやっておかないと、たまにハングアップする
-;	PICの初期化はあとでやる
+; ??所有PIC,禁止所有中断
+;	根据AT兼容机的?格，如果要初始化PIC，必?在CLI之前?行，否?有?候回挂起
+;	随后?行PIC初始化
 
 		MOV		AL,0xff
 		OUT		0x21,AL
-		NOP						; OUT命令を連続させるとうまくいかない機種があるらしいので
+		NOP						; ???行OUT指令，有些机器会无法正常?行，所以在此插入一条NOP
 		OUT		0xa1,AL
 
-		CLI						; さらにCPUレベルでも割り込み禁止
+		CLI						; 禁止CPU??的中断
 
-; CPUから1MB以上のメモリにアクセスできるように、A20GATEを設定
+; ??A20，以使用1MB以上的内存
 
 		CALL	waitkbdout
 		MOV		AL,0xd1
@@ -57,25 +56,25 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 
 [INSTRSET "i486p"]				; 486の命令まで使いたいという記述
 
-		LGDT	[GDTR0]			; ??GDT?置
+		LGDT	[GDTR0]			; ??GDT
 		MOV		EAX,CR0
-		AND		EAX,0x7fffffff	; bit31を0にする（ページング禁止のため）
-		OR		EAX,0x00000001	; bit0を1にする（プロテクトモード移行のため）
+		AND		EAX,0x7fffffff	; bit31位置0，禁止分?
+		OR		EAX,0x00000001	; bit0位置1，切?到保?模式
 		MOV		CR0,EAX
 		JMP		pipelineflush
 pipelineflush:
-		MOV		AX,1*8			;  読み書き可能セグメント32bit
+		MOV		AX,1*8			;  可?写的段 1# ； 1 * 8 = 1 << 3  ：0000_1000b
 		MOV		DS,AX
 		MOV		ES,AX
 		MOV		FS,AX
 		MOV		GS,AX
 		MOV		SS,AX
 
-; bootpackの転送
+; 加?bootpack
 
-		MOV		ESI,bootpack	; 転送元
-		MOV		EDI,BOTPAK		; 転送先
-		MOV		ECX,512*1024/4
+		MOV		ESI,bootpack	; 源
+		MOV		EDI,BOTPAK		; 目的地
+		MOV		ECX,512*1024/4  ; size
 		CALL	memcpy
 
 ; ついでにディスクデータも本来の位置へ転送
@@ -97,10 +96,10 @@ pipelineflush:
 		SUB		ECX,512/4		; IPLの分だけ差し引く
 		CALL	memcpy
 
-; asmheadでしなければいけないことは全部し終わったので、
-;	あとはbootpackに任せる
+; asmhead的工作到此?束
+;	接下来交?bootpack
 
-; bootpackの起動
+; bootpack??
 
 		MOV		EBX,BOTPAK
 		MOV		ECX,[EBX+16]
@@ -134,7 +133,7 @@ memcpy:
 		ALIGNB	16
 GDT0:
 		RESB	8				; ヌルセレクタ
-		DW		0xffff,0x0000,0x9200,0x00cf	; 読み書き可能セグメント32bit
+		DW		0xffff,0x0000,0x9200,0x00cf	; 1#段，可?写的
 		DW		0xffff,0x0000,0x9a28,0x0047	; 実行可能セグメント32bit（bootpack用）
 
 		DW		0
