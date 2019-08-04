@@ -1,38 +1,41 @@
 #include <stdio.h>
 #include "bootpack.h"
 
+#define EFLAGS_AC_BIT 		 0x00040000
+#define  CR0_CACHE_DISABLE   0x60000000
 
 
-unsigned int memtest_sub(unsigned int start, unsigned int end)
-{
-	unsigned int i = 0, *addr, origin_value, test_value1 = 0xaa55aa55, test_value2 = 0x55aa55aa;
-	
-	for(i = start ; i < end ; i += 4){
-		addr = (unsigned int *)i;
-		origin_value = *addr;
-		*addr = test_value1;
-		*addr ^= 0xffffffff;
-		
-		if(*addr != test_value2) {
-not_memory:
-			*addr = origin_value;
-			break;
-		}
-		
-		*addr ^= 0xffffffff;
-		
-		if(*addr != test_value1){
-			goto not_memory;
-		}
-		
-		*addr = origin_value;
-		
-	}
-	return i;
-}
 unsigned int memtest(unsigned int start, unsigned int end)
 {
-	return memtest_sub(start, end);
+	char flg486 = 0;
+	unsigned int eflags,cr0,memory_size;
+	
+	eflags = io_load_eflags();
+	eflags =  eflags | EFLAGS_AC_BIT;
+	io_store_eflags(eflags);
+	eflags = io_load_eflags();
+	
+	if( (eflags & EFLAGS_AC_BIT) != 0 ){
+		flg486 = 1;
+	}
+	eflags = eflags & ~EFLAGS_AC_BIT;
+	io_store_eflags(eflags);
+	
+	if(flg486 != 0){
+		cr0 = load_cr0();
+		cr0 |= CR0_CACHE_DISABLE;
+		store_cr0(cr0);
+	}
+	
+	memory_size = memtest_sub(start, end);
+	
+	if(flg486 != 0){
+		cr0 = load_cr0();
+		cr0 &=  ~CR0_CACHE_DISABLE;
+		store_cr0(cr0);
+	}
+	
+	return memory_size;
 }
 
 

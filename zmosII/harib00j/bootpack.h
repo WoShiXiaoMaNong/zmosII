@@ -80,8 +80,11 @@ void io_out8(int port,int value);
 char io_in8(int port);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
+int load_cr0(void);
+void store_cr0(int cr0); 
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
+int memtest_sub(unsigned start,unsigned end);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
