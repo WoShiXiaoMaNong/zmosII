@@ -67,15 +67,6 @@ struct FIFO8{
 };
 
 
-//bootpack.h
-struct MOUSE_DESC{
-	unsigned char buf[3],phase;
-	int x,y,btn;
-};
-int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
-void enable_mouse(struct MOUSE_DESC *mdec);
-void init_keyboard(void);
-void wait_KBC_sendready(void);
 
 
 //nas functions
@@ -125,8 +116,8 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 
 /* int.c */
 void init_pic(void);
-void inthandler21(int *esp);
-void inthandler2c(int *esp);
+
+
 
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
@@ -149,5 +140,21 @@ void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
 int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
 int fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+/*mouse.c*/
+struct MOUSE_DESC{
+	unsigned char buf[3],phase;
+	int x,y,btn;
+};
+void inthandler2c(int *esp);
+int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
+void enable_mouse(struct MOUSE_DESC *mdec);
+extern struct FIFO8 mousefifo;
+
+/*keyboard.c*/
+void init_keyboard(void);
+void wait_KBC_sendready(void);
+void inthandler21(int *esp);
+extern struct FIFO8 keyfifo;
 
 #endif

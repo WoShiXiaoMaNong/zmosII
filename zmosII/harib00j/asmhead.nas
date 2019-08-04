@@ -74,7 +74,7 @@ pipelineflush:
 
 		MOV		ESI,bootpack	; 源
 		MOV		EDI,BOTPAK		; 目的地
-		MOV		ECX,512*1024/   ; size
+		MOV		ECX,512*1024/4  ; size
 		CALL	memcpy
 
 ; ついでにディスクデータも本来の位置へ転送
