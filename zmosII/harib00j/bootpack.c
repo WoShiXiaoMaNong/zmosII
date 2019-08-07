@@ -1,8 +1,117 @@
 #include <stdio.h>
 #include "bootpack.h"
 
-#define EFLAGS_AC_BIT 		 0x00040000
-#define  CR0_CACHE_DISABLE   0x60000000
+#define MEMMAN_FREES		4090
+#define MEMMAN_ADDR			0x003c0000
+
+
+struct FREEINFO{
+	unsigned int addr,size;
+};
+
+struct MEMMAN{
+	int frees,maxfrees, lostsize, losts;
+	struct FREEINFO free[MEMMAN_FREES];
+};
+
+
+
+void memman_init(struct MEMMAN *man){
+	man->frees = 0;
+	man->maxfrees = 0;
+	man->lostsize = 0;
+	man->losts = 0;
+	return;
+}
+
+
+int memman_total(struct MEMMAN *man){
+	int total = 0;
+	int i;
+	for(i = 0; i < man->frees ; i++){
+		total += man->free[i].size;
+	}
+	return total;
+}
+
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size){
+	int i,j;
+	unsigned addr;
+	for(i = 0 ; i < man->frees; i ++){
+		if(man->free[i].size >= size){
+			addr = man->free[i].addr;
+			man->free[i].addr += size;
+			man->free[i].size -=size;
+			
+			/*当前free 分配完的时候，清除它*/
+			if(man->free[i].size == 0){
+				man->frees --;
+				for(j = i ; i < man->frees; i ++){
+					man->free[i] = man->free[i + 1];
+				}
+			}
+			
+			return addr; 
+		}
+	}
+	return 0;
+	
+}
+
+int memman_free(struct MEMMAN *man ,unsigned int addr,unsigned int size)
+{
+	int i,j;
+	for(i = 0 ; i < man->frees; i++){
+		if(man->free[i].addr > addr){
+			break;
+		}
+	}
+	
+	/*前面有free的内存*/
+	if(i > 0){
+		
+		/*可与前面的free内存合并*/
+		if(man->free[i-1].addr + size == addr){
+			man->free[i-1].size += size;
+			
+			/*后面有free的内存*/
+			if(i < man->frees){
+				/*可与后面的free内存合并*/
+				if(man->free[i].addr == addr + size){
+					man->free[i-1].size += man->free[i].size;
+					man->frees --;
+					for(;i< man->frees ; i++){
+						man->free[i] = man->free[i+1];
+					}
+				}
+			}
+			return 0;
+		}
+	}
+	
+	if(i < man->frees){
+		if(man->free[i].addr == addr + size){
+			man->free[i].addr -= size;
+			man->free[i].size += size;
+			return 0;
+		}
+	}
+	
+	if(man->frees < MEMMAN_FREES){
+		for(j = man->free; j > i ;j --){
+			man->free[j] = man->free[j - 1];
+		}
+		
+		man->free[i].addr = addr;
+		man->free[i].size = size;
+		man->frees ++;
+		return 0;
+	}
+	
+	man->losts++;
+	man->lostsize += size;
+	return -1;
+}
 
 
 unsigned int memtest(unsigned int start, unsigned int end)
@@ -44,15 +153,16 @@ unsigned int memtest(unsigned int start, unsigned int end)
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
+	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	struct MOUSE_DESC mdec;
-	char s[10];
+	char s[30];
 	unsigned char keybuff[36],mousebuff[36];
 	char cursor[16][16];
 	
 	init_gdtidt();
 	init_pic();
 	io_sti();
-		
+	
 	fifo8_init(&keyfifo,keybuff,36);
 	fifo8_init(&mousefifo,mousebuff,36);
 	
@@ -63,6 +173,16 @@ void HariMain(void)
 	enable_mouse(&mdec);
 	init_palette();
 	init_screen(binfo);
+	
+	unsigned int mem_total;
+	mem_total = memtest(0x00400000,0xbfffffff);
+	putfont8_string(binfo->vram,binfo->scrnx,0,100,COL8_FFFFFF,s );
+	memman_init(man);
+	
+	memman_free(man,0x00001000,0x009e000);
+	memman_free(man,0x00400000,mem_total - 0x00400000);
+	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
+	putfont8_string(binfo->vram,binfo->scrnx,0,10,COL8_FFFFFF,s );
 	
 	/* init mouse start */
 	int mx,my;

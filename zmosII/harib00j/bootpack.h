@@ -18,6 +18,8 @@
 #define COL8_008484		14
 #define COL8_848484		15
 
+#define EFLAGS_AC_BIT 		 0x00040000
+#define  CR0_CACHE_DISABLE   0x60000000
 
 /*Keyboard & Mouse start */
 #define PORT_KEYDAT     		0x0060
