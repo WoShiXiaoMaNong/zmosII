@@ -105,7 +105,7 @@ void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
  *       vram + x + y * 320;
 */
 void boxfill8(unsigned char *vram,int xsize, unsigned char color,int x0,int y0,int x1,int y1);
-void init_screen(struct BOOTINFO * binfo);
+void init_screen(unsigned char *vram,int xsize,int ysize);
 void init_mouse_cursor8(char *mouse,char back_ground_color);
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);

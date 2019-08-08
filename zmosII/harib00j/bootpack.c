@@ -26,7 +26,7 @@ void HariMain(void)
 	init_keyboard();
 	enable_mouse(&mdec);
 	init_palette();
-	init_screen(binfo);
+	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
 	
 	unsigned int mem_total;
 	mem_total = memtest(0x00400000,0xbfffffff);
