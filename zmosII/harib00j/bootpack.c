@@ -1,58 +1,22 @@
 #include <stdio.h>
 #include "bootpack.h"
 
-#define EFLAGS_AC_BIT 		 0x00040000
-#define  CR0_CACHE_DISABLE   0x60000000
-
-
-unsigned int memtest(unsigned int start, unsigned int end)
-{
-	char flg486 = 0;
-	unsigned int eflags,cr0,memory_size;
-	
-	eflags = io_load_eflags();
-	eflags =  eflags | EFLAGS_AC_BIT;
-	io_store_eflags(eflags);
-	eflags = io_load_eflags();
-	
-	if( (eflags & EFLAGS_AC_BIT) != 0 ){
-		flg486 = 1;
-	}
-	eflags = eflags & ~EFLAGS_AC_BIT;
-	io_store_eflags(eflags);
-	
-	if(flg486 != 0){
-		cr0 = load_cr0();
-		cr0 |= CR0_CACHE_DISABLE;
-		store_cr0(cr0);
-	}
-	
-	memory_size = memtest_sub(start, end);
-	
-	if(flg486 != 0){
-		cr0 = load_cr0();
-		cr0 &=  ~CR0_CACHE_DISABLE;
-		store_cr0(cr0);
-	}
-	
-	return memory_size;
-}
-
 
 
 
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
+	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	struct MOUSE_DESC mdec;
-	char s[10];
+	char s[30];
 	unsigned char keybuff[36],mousebuff[36];
 	char cursor[16][16];
 	
 	init_gdtidt();
 	init_pic();
 	io_sti();
-		
+	
 	fifo8_init(&keyfifo,keybuff,36);
 	fifo8_init(&mousefifo,mousebuff,36);
 	
@@ -64,6 +28,17 @@ void HariMain(void)
 	init_palette();
 	init_screen(binfo);
 	
+	unsigned int mem_total;
+	mem_total = memtest(0x00400000,0xbfffffff);
+	putfont8_string(binfo->vram,binfo->scrnx,0,100,COL8_FFFFFF,s );
+	memman_init(man);
+	
+	memman_free(man,0x00001000,0x009e000);
+	memman_free(man,0x00400000,mem_total - 0x00400000);
+	
+	
+	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
+	putfont8_string(binfo->vram,binfo->scrnx,0,30,COL8_FFFFFF,s );
 	/* init mouse start */
 	int mx,my;
 	mx = binfo->scrnx / 2 - 16;
@@ -74,7 +49,7 @@ void HariMain(void)
 	/* init mouse end */
 	
 	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
-	sprintf(s,"Memory : %dMB",memsize);
+	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(binfo->vram,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	
 	unsigned data;
