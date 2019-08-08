@@ -112,6 +112,13 @@ void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char col
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
 
+/*sheet.c*/
+void shtctl_init(struct MEMMAN *man, unsigned char *vram, int xsize, int ysize);
+struct SHEET *sheet_alloc(struct STCTL *ctl);
+void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_inv);
+void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height);
+void sheet_refresh(struct STCTL *ctl);
+
 //dsctbl.c
 void init_gdtidt(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR* gdt,unsigned int limit,int base,int access);
