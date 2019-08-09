@@ -64,7 +64,7 @@ void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, i
 
 void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height)
 {
-	int old,h;
+	int old,h,i;
 	if(height > ctl->top + 1){
 		height = ctl->top + 1;
 	}
@@ -75,7 +75,50 @@ void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height)
 	old = sht->height;
 	sht->height = height;
 	
-	//TBD
+	if(old == height){
+		return;
+	}
+	if(height >= MAX_SHEETS){
+		return;
+	}
+	
+	
+	/*Sheet up*/
+	if(old < height){
+		if(old >= 0){
+			for(i = old ; i < height ; i ++){
+				ctl->sheets[i] = ctl->sheets[i + 1];
+				ctl->sheets[i]->height = i;
+			}
+			ctl->sheets[height] = sht;
+		}else{
+			for(i = ctl->top; i >= height ; i--){
+				ctl->sheets[i + 1] = ctl->sheets[i];
+				ctl->sheets[i + 1]->height = i + 1;
+			}
+			ctl->sheets[height] = sht;
+			ctl->top ++;
+			
+		}
+		sheet_refresh(ctl);
+	}else if(old > height){	/*Sheet down */
+		if(height >= 0 ){
+			for(i = old ; i < height ; i --){
+				ctl->sheets[i] = ctl->sheets[i + 1];
+				ctl->sheets[i]->height = i;
+			}
+			ctl->sheets[height] = sht;
+		}else{/*隐藏当前图层*/
+			for(i = old; i < ctl->top ; i++){
+				ctl->sheets[i] = ctl->sheets[i + 1];
+				ctl->sheets[i] = i;
+			}
+			ctl->top --;
+		}
+		sheet_refresh(ctl);
+	}
+	return;
+
 	
 }
 
