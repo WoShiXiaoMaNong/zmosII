@@ -11,7 +11,6 @@ void HariMain(void)
 	struct MOUSE_DESC mdec;
 	char s[30];
 	unsigned char keybuff[36],mousebuff[36];
-	char cursor[16][16];
 	
 	init_gdtidt();
 	init_pic();
