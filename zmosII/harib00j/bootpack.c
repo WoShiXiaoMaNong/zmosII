@@ -27,13 +27,14 @@ void HariMain(void)
 	init_palette();
 	
 	
+	/*初始化内存管理器*/
 	unsigned int mem_total;
 	mem_total = memtest(0x00400000,0xbfffffff);
 	memman_init(man);
 	memman_free(man,0x00001000,0x009e000);
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
-	
+	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
 	struct SHEET *sheet_back = sheet_alloc(sheetctl);
 	struct SHEET *sheet_mouse = sheet_alloc(sheetctl);
@@ -45,28 +46,28 @@ void HariMain(void)
 	sheet_updown(sheetctl, sheet_mouse,1);
 	
 	init_screen(back_buf, binfo->scrnx, binfo->scrny);
-	
-	
-	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
-	putfont8_string(back_buf,binfo->scrnx,0,30,COL8_FF0000,s );
 	/* init mouse start */
 	int mx,my;
 	mx = binfo->scrnx / 2 - 16;
 	my = binfo->scrny / 2 - 16;
-	
 	init_mouse_cursor8(mouse_buf,99);/*设置透明色号为99*/
 	sheet_slide(sheetctl, sheet_mouse, mx,my);
 	/* init mouse end */
 	
+	
+	/*输出内存使用信息*/
+	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
+	putfont8_string(back_buf,binfo->scrnx,0,30,COL8_FF0000,s );	
 	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
 	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
+	sheet_slide(sheetctl, sheet_back, 0,0);
 	
 	unsigned data;
 	int keyBufDataIndex;
 	unsigned char mouse_data_buf[3], mouse_phase;
 	mouse_phase = 0;
-	sheet_slide(sheetctl, sheet_back, 0,0);
+	
 	while(1){
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
@@ -99,11 +100,10 @@ void HariMain(void)
 					
 					boxfill8(back_buf, binfo->scrnx, COL8_008484, 32, 16, 32 + 15* 8 -1,31);
 					putfont8_string(back_buf,binfo->scrnx,32,16,COL8_FFFFFF,s );
-					
-					/*repaint mouse ---> Mouse move!!!*/
+				
 					mx += mdec.x;
 					my += mdec.y;
-					sheet_slide(sheetctl, sheet_mouse, mx,my);
+					sheet_slide(sheetctl, sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					
 				}
 			}
