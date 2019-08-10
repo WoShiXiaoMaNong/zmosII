@@ -1,28 +1,12 @@
 #include "bootpack.h"
-#define MAX_SHEETS	256
-#define SHEET_USED	1
-#define SHEET_NOT_USED	0
-
-struct SHEET{
-	unsigned char *buf;
-	int bxsize,bysize, vx0,vy0,col_inv,height,flags;
-};
-
-
-struct STCTL{
-	unsigned char *vram;
-	int xsize,ysize,top;
-	struct SHEET *sheets[MAX_SHEETS];
-	struct SHEET sheet0[MAX_SHEETS];
-};
 
 
 
-struct STCTL *shtctl_init(struct MEMMAN *man, unsigned char *vram, int xsize, int ysize)
+struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize)
 {
 	struct STCTL * ctl;
 	ctl = (struct STCTL *)memman_alloc_4k(man,sizeof(struct STCTL));
-	if(ctl == o){
+	if(ctl == 0){
 		goto err;
 	}
 	int i;
@@ -31,7 +15,7 @@ struct STCTL *shtctl_init(struct MEMMAN *man, unsigned char *vram, int xsize, in
 	ctl->ysize = ysize;
 	ctl->top = -1;
 	for(i = 0 ; i <MAX_SHEETS ; i++){
-		ctl->sheet0[i].flasg = SHEET_NOT_USED; /*标记成 未使用*/
+		ctl->sheet0[i].flags = SHEET_NOT_USED; /*标记成 未使用*/
 	}
 err:
 	return ctl;
@@ -64,7 +48,9 @@ void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, i
 
 void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height)
 {
-	int old,h,i;
+	int old,i;
+	
+
 	if(height > ctl->top + 1){
 		height = ctl->top + 1;
 	}
@@ -127,8 +113,9 @@ void sheet_refresh(struct STCTL *ctl)
 {
 	int h,by,bx, vy,vx;
 	struct SHEET *sht;
-	unsigned char *buf,c,vram = ctl->vram;
-	for(h = 0 ; h < ctl->top ; h++){
+	unsigned char *buf,c,*vram = ctl->vram;
+	
+	for(h = 0 ; h <= ctl->top ; h++){
 		sht = ctl->sheets[h];
 		buf = sht->buf;
 		for(by = 0 ;by < sht->bysize ; by++){
@@ -139,6 +126,7 @@ void sheet_refresh(struct STCTL *ctl)
 				c = buf[by * sht->bxsize + bx];
 				if(c != sht->col_inv){
 					vram[vy * ctl->xsize + vx] = c;
+					
 				}
 			}
 			
@@ -149,8 +137,24 @@ void sheet_refresh(struct STCTL *ctl)
 
 
 
+void sheet_slide(struct STCTL *ctl, struct SHEET *sht, int vx0, int vy0)
+{
+	sht->vx0 = vx0;
+	sht->vy0 = vy0;
+	if(sht->flags >= 0){
+		sheet_refresh(ctl);
+	}
+	return;
+}
 
-
+void sheet_free(struct STCTL *ctl,struct SHEET *sht)
+{
+	if(sht->height >= 0){
+		sheet_updown(ctl,sht,-1);
+	}
+	sht->flags = 0;
+	return;
+}
 
 
 
