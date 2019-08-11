@@ -54,6 +54,7 @@ void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
 
 void HariMain(void)
 {
+	int countForTest;
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
 	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	struct MOUSE_DESC mdec;
@@ -97,7 +98,9 @@ void HariMain(void)
 	sheet_updown(sheet_back,0);
 	sheet_updown(sheet_windows,1);
 	sheet_updown(sheet_mouse,2);
-	
+
+	sheet_slide(sheet_windows, 80,70);
+
 	init_screen(back_buf, binfo->scrnx, binfo->scrny);
 	/* init mouse start */
 	int mx,my;
@@ -106,7 +109,7 @@ void HariMain(void)
 	init_mouse_cursor8(mouse_buf,99);/*设置透明色号为99*/
 	sheet_slide(sheet_mouse, mx,my);
 	/* init mouse end */
-	sheet_slide(sheet_windows, mx,my);
+	
 	
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
@@ -115,12 +118,18 @@ void HariMain(void)
 	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	sheet_slide(sheet_back, 0,0);
-	
+	//sheet_refresh(sheetctl,0,0,binfo->scrnx,binfo->scrny);
 	unsigned data;
 	while(1){
+		countForTest++;
+		sprintf(s,"Count : %5d",countForTest);
+		boxfill8(windows_buf, 160, COL8_C6C6C6, 40, 28, 149,43);
+		putfont8_string(windows_buf,sheet_windows->bxsize,40, 28,COL8_FFFFFF,s );
+		sheet_refresh(sheet_windows,40, 28, 149,43);
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
-			io_stihlt();
+			//io_stihlt();
+			io_sti();
 		}else{
 			if( fifo8_status(&keyfifo) != 0){
 				data = fifo8_get(&keyfifo);
@@ -129,7 +138,7 @@ void HariMain(void)
 				boxfill8(back_buf, binfo->scrnx, COL8_008484, 0, 16, 15,31);
 				sprintf(s,"%02X",data);
 				putfont8_string(back_buf,binfo->scrnx,0,16,COL8_FFFFFF,s );
-				sheet_refresh(sheetctl,0,0,binfo->scrnx,binfo->scrny);
+				sheet_refresh(sheet_back,0,16,15,31);
 			}else if( fifo8_status(&mousefifo) != 0){
 				data = fifo8_get(&mousefifo);
 				io_sti();
@@ -151,7 +160,7 @@ void HariMain(void)
 					
 					boxfill8(back_buf, binfo->scrnx, COL8_008484, 32, 17, 32 + 50* 8 -1,31);
 					putfont8_string(back_buf,binfo->scrnx,32,17,COL8_FFFFFF,s );
-					sheet_refresh(sheetctl, 32, 17, 32 + 50* 8 -1,31);
+					sheet_refresh(sheet_back, 32, 17, 32 + 50* 8 -1,31);
 					
 					mx += mdec.x;
 					my += mdec.y;
@@ -159,7 +168,7 @@ void HariMain(void)
 					sprintf(s,"Mouse position[%4d:%4d]",mx,my);
 					boxfill8(back_buf, binfo->scrnx, COL8_008484,  0, 0, 80 + 50* 8 -1,15);
 					putfont8_string(back_buf,binfo->scrnx,1,1,COL8_FFFFFF,s );
-					sheet_refresh(sheetctl,  0, 0, 80 + 50* 8 -1,15);
+					sheet_refresh(sheet_back,  0, 0, 80 + 50* 8 -1,15);
 					
 					sheet_slide(sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					
