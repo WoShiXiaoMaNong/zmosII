@@ -91,7 +91,7 @@ void HariMain(void)
 	unsigned char *back_buf, mouse_buf[256],*windows_buf;
 	back_buf = memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
 	windows_buf = memman_alloc_4k(man, 160 * 80);
-	create_windows8(windows_buf,160,80,"test windows");
+	create_windows8(windows_buf,160,80,"test window");
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
 	sheet_setbuf(sheet_mouse, mouse_buf, 16,16, 99);/*设置透明色号为99*/
 	sheet_setbuf(sheet_windows,windows_buf,160,80,-1);
@@ -122,10 +122,10 @@ void HariMain(void)
 	unsigned data;
 	while(1){
 		countForTest++;
-		sprintf(s,"Count : %5d",countForTest);
-		boxfill8(windows_buf, 160, COL8_C6C6C6, 40, 28, 149,43);
-		putfont8_string(windows_buf,sheet_windows->bxsize,40, 28,COL8_FFFFFF,s );
-		sheet_refresh(sheet_windows,40, 28, 149,43);
+		sprintf(s,"Count : %010d",countForTest);
+		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,43);
+		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
+		sheet_refresh(sheet_windows,5, 28, 149,43);
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
 			//io_stihlt();
@@ -148,11 +148,11 @@ void HariMain(void)
 					
 					if( (mdec.btn & 0x01) != 0){
 						s[13] = 'L';
-						//sheet_updown(sheet_mouse,-1);
+						sheet_updown(sheet_mouse,sheet_mouse->height -1);
 					}
 					if( (mdec.btn & 0x02) != 0){
 						s[15] = 'R';
-						//sheet_updown(sheet_mouse,2);
+						sheet_updown(sheet_mouse,sheet_mouse->height + 1);
 					}
 					if( (mdec.btn & 0x04) != 0){
 						s[14] = 'C';
@@ -165,7 +165,7 @@ void HariMain(void)
 					mx += mdec.x;
 					my += mdec.y;
 					
-					sprintf(s,"Mouse position[%4d:%4d]",mx,my);
+					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);
 					boxfill8(back_buf, binfo->scrnx, COL8_008484,  0, 0, 80 + 50* 8 -1,15);
 					putfont8_string(back_buf,binfo->scrnx,1,1,COL8_FFFFFF,s );
 					sheet_refresh(sheet_back,  0, 0, 80 + 50* 8 -1,15);
