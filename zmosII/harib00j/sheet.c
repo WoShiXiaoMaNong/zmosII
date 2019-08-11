@@ -114,7 +114,7 @@ void sheet_updown(struct SHEET *sht,int height)
 void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
 	
-	if(sht->height >=0 ){
+	if(sht->height >= 0 ){
 		sheet_refresh_sub(sht->ctl,bx0 + sht->vx0,by0 + sht->vy0,bx1 + sht->vx0,by1 + sht->vy0);
 	}
 	
