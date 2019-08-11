@@ -111,13 +111,10 @@ void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height)
 
 void sheet_refresh(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1)
 {
-	int h,by,bx, vy,vx;
+	int h;
 	struct SHEET *sht;
-	unsigned char *buf,c,*vram = ctl->vram;
-	
 	for(h = 0 ; h <= ctl->top ; h++){
 		sht = ctl->sheets[h];
-		buf = sht->buf;
 		if(sht->flags == SHEET_USED){
 			sheet_refresh_sub(ctl,sht,vx0,vy0,vx1,vy1);
 		}
@@ -126,7 +123,7 @@ void sheet_refresh(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1)
 
 void sheet_refresh_sub(struct STCTL *ctl,struct SHEET *sht, int vx0, int vy0, int vx1, int vy1)
 {
-	int by,bx, vy,vx;
+	int by,bx, vy,vx,notOverSize;
 	unsigned char *buf,c,*vram = ctl->vram;
 	
 	buf = sht->buf;
@@ -135,7 +132,7 @@ void sheet_refresh_sub(struct STCTL *ctl,struct SHEET *sht, int vx0, int vy0, in
 		for(bx = 0 ; bx < sht->bxsize ; bx ++){
 			vx = sht->vx0 + bx;
 			c = buf[by * sht->bxsize + bx];
-			int notOverSize = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
+			notOverSize = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
 			if(vx >= vx0 && vx <= vx1 && vy >= vy0 && vy <= vy1 && notOverSize){
 				if(c != sht->col_inv){
 					vram[vy * ctl->xsize + vx] = c;

@@ -64,9 +64,7 @@ void HariMain(void)
 	sheet_slide(sheetctl, sheet_back, 0,0);
 	
 	unsigned data;
-	int keyBufDataIndex;
-	unsigned char mouse_data_buf[3], mouse_phase;
-	mouse_phase = 0;
+	unsigned char mouse_phase = 0;
 	
 	while(1){
 		io_cli();
