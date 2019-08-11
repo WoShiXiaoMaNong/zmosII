@@ -16,6 +16,7 @@ struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize)
 	ctl->top = -1;
 	for(i = 0 ; i <MAX_SHEETS ; i++){
 		ctl->sheet0[i].flags = SHEET_NOT_USED; /*标记成 未使用*/
+		ctl->sheet0[i].ctl = ctl;
 	}
 err:
 	return ctl;
