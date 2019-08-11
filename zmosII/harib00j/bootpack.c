@@ -1,7 +1,55 @@
 #include <stdio.h>
 #include "bootpack.h"
 
-
+void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
+{
+	static char closebtn[14][16] = {
+		"ooooooooooooooo@",
+		"oQQQQQQQQQQQQQ$@",
+		"oQQQQQQQQQQQQQ$@",
+		"oQQQ@@QQQQ@@QQ$@",
+		"oQQQQ@@QQ@@QQQ$@",
+		"oQQQQQ@@@@QQQQ$@",
+		"oQQQQQQ@@QQQQQ$@",
+		"oQQQQQ@@@@QQQQ$@",
+		"oQQQQ@@QQ@@QQQ$@",
+		"oQQQ@@QQQQ@@QQ$@",
+		"oQQQQQQQQQQQQQ$@",
+		"oQQQQQQQQQQQQQ$@",
+		"o$$$$$$$$$$$$$$@",
+		"@@@@@@@@@@@@@@@@"
+	};
+	int x,y;
+	char color;
+	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
+	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
+	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
+	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         1,         ysize - 2);
+	boxfill8(buf, xsize, COL8_848484, xsize - 2, 1,         xsize - 2, ysize - 2);
+	boxfill8(buf, xsize, COL8_000000, xsize - 1, 0,         xsize - 1, ysize - 1);
+	boxfill8(buf, xsize, COL8_C6C6C6, 2,         2,         xsize - 3, ysize - 3);
+	boxfill8(buf, xsize, COL8_000084, 3,         3,         xsize - 4, 20       );
+	boxfill8(buf, xsize, COL8_848484, 1,         ysize - 2, xsize - 2, ysize - 2);
+	boxfill8(buf, xsize, COL8_000000, 0,         ysize - 1, xsize - 1, ysize - 1);
+	putfont8_string(buf, xsize, 24, 4, COL8_C6C6C6, title);
+	
+	for(y = 0 ; y < 14; y++){
+		for(x = 0 ; x < 16 ; x++){
+			color = closebtn[y][x];
+			if(color == 'Q'){
+				color = COL8_C6C6C6;
+			}else if(color == '@'){
+				color = COL8_000000;
+			}else if(color == '$'){
+				color = COL8_848484;
+			}else{
+				color = COL8_FFFFFF;
+			}
+			/*定位 close btn 到右上角*/
+			buf[(y + 5) * xsize + (xsize - 21 +x)] = color;
+		}
+	}
+}
 
 
 void HariMain(void)
@@ -38,12 +86,17 @@ void HariMain(void)
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
 	struct SHEET *sheet_back = sheet_alloc(sheetctl);
 	struct SHEET *sheet_mouse = sheet_alloc(sheetctl);
-	unsigned char *back_buf, mouse_buf[256];
+	struct SHEET *sheet_windows = sheet_alloc(sheetctl);
+	unsigned char *back_buf, mouse_buf[256],*windows_buf;
 	back_buf = memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
+	windows_buf = memman_alloc_4k(man, 160 * 80);
+	create_windows8(windows_buf,160,80,"test windows");
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
 	sheet_setbuf(sheet_mouse, mouse_buf, 16,16, 99);/*设置透明色号为99*/
+	sheet_setbuf(sheet_windows,windows_buf,160,80,-1);
 	sheet_updown(sheet_back,0);
-	sheet_updown(sheet_mouse,1);
+	sheet_updown(sheet_windows,1);
+	sheet_updown(sheet_mouse,2);
 	
 	init_screen(back_buf, binfo->scrnx, binfo->scrny);
 	/* init mouse start */
@@ -53,7 +106,7 @@ void HariMain(void)
 	init_mouse_cursor8(mouse_buf,99);/*设置透明色号为99*/
 	sheet_slide(sheet_mouse, mx,my);
 	/* init mouse end */
-	
+	sheet_slide(sheet_windows, mx,my);
 	
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
@@ -86,11 +139,11 @@ void HariMain(void)
 					
 					if( (mdec.btn & 0x01) != 0){
 						s[13] = 'L';
-						sheet_updown(sheet_mouse,-1);
+						//sheet_updown(sheet_mouse,-1);
 					}
 					if( (mdec.btn & 0x02) != 0){
 						s[15] = 'R';
-						sheet_updown(sheet_mouse,1);
+						//sheet_updown(sheet_mouse,2);
 					}
 					if( (mdec.btn & 0x04) != 0){
 						s[14] = 'C';
