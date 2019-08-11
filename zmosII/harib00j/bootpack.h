@@ -137,7 +137,8 @@ struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize);
 struct SHEET *sheet_alloc(struct STCTL *ctl);
 void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_inv);
 void sheet_updown(struct STCTL *ctl, struct SHEET *sht,int height);
-void sheet_refresh(struct STCTL *ctl);
+void sheet_refresh(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1);
+void sheet_refresh_sub(struct STCTL *ctl,struct SHEET *sht, int vx0, int vy0, int vx1, int vy1);
 void sheet_slide(struct STCTL *ctl, struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct STCTL *ctl,struct SHEET *sht);
 //dsctbl.c

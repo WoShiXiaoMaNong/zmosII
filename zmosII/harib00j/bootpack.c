@@ -57,7 +57,7 @@ void HariMain(void)
 	
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
-	putfont8_string(back_buf,binfo->scrnx,0,30,COL8_FF0000,s );	
+	putfont8_string(back_buf,binfo->scrnx,0,32,COL8_FF0000,s );	
 	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
 	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
@@ -80,7 +80,7 @@ void HariMain(void)
 				boxfill8(back_buf, binfo->scrnx, COL8_008484, 0, 16, 15,31);
 				sprintf(s,"%02X",data);
 				putfont8_string(back_buf,binfo->scrnx,0,16,COL8_FFFFFF,s );
-				sheet_refresh(sheetctl);
+				sheet_refresh(sheetctl,0,0,binfo->scrnx,binfo->scrny);
 			}else if( fifo8_status(&mousefifo) != 0){
 				data = fifo8_get(&mousefifo);
 				io_sti();
@@ -100,9 +100,16 @@ void HariMain(void)
 					
 					boxfill8(back_buf, binfo->scrnx, COL8_008484, 32, 16, 32 + 15* 8 -1,31);
 					putfont8_string(back_buf,binfo->scrnx,32,16,COL8_FFFFFF,s );
-				
+					sheet_refresh(sheetctl, 32, 16, 32 + 15* 8 -1,31);
+					
 					mx += mdec.x;
 					my += mdec.y;
+					
+					sprintf(s,"[%4d,%4d]",mx,my);
+					boxfill8(back_buf, binfo->scrnx, COL8_008484,  0, 0, 80 + 11* 8 -1,15);
+					putfont8_string(back_buf,binfo->scrnx,1,1,COL8_FFFFFF,s );
+					sheet_refresh(sheetctl,  0, 0, 80 + 11* 8 -1,15);
+					
 					sheet_slide(sheetctl, sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					
 				}
