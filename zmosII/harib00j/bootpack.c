@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "bootpack.h"
 
+extern struct TIMERCTL timerctl;
 void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
 {
 	static char closebtn[14][16] = {
@@ -68,9 +69,10 @@ void HariMain(void)
 	fifo8_init(&keyfifo,keybuff,36);
 	fifo8_init(&mousefifo,mousebuff,36);
 	
+	init_pit(); /*初始化定时器芯片，每秒100次*/
 	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
-	io_out8(PIC0_IMR, 0xf9); /* PIC0(主PIC) 开放IRQ-1(键盘) IRQ-2(链接 从PIC) (11111001) */
-	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (11101111) */
+	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
+	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
 	init_keyboard();
 	enable_mouse(&mdec);
 	init_palette();
@@ -122,14 +124,17 @@ void HariMain(void)
 	unsigned data;
 	while(1){
 		countForTest++;
+		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,75);
 		sprintf(s,"Count : %010d",countForTest);
-		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,43);
 		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
-		sheet_refresh(sheet_windows,5, 28, 149,43);
+		
+		sprintf(s,"Timer : %05ds",timerctl.count / 100);
+		putfont8_string(windows_buf,sheet_windows->bxsize,5, 50,COL8_840000,s );
+		sheet_refresh(sheet_windows,5, 28, 149,75);
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
-			//io_stihlt();
-			io_sti();
+			io_stihlt();
+			//io_sti();
 		}else{
 			if( fifo8_status(&keyfifo) != 0){
 				data = fifo8_get(&keyfifo);

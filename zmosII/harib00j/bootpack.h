@@ -101,6 +101,11 @@ struct STCTL{
 	struct SHEET sheet0[MAX_SHEETS];
 };
 
+/*timer.c*/
+struct TIMERCTL{
+	unsigned int count;
+};
+
 //nas functions
 void io_hlt(void);
 void io_stihlt(void);
@@ -114,6 +119,7 @@ void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0); 
+void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
@@ -185,6 +191,11 @@ void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
 int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
 int fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+/*timer.c*/
+void init_pit(void);
+void inthandler20(int *esp);
+
 
 /*mouse.c*/
 struct MOUSE_DESC{
