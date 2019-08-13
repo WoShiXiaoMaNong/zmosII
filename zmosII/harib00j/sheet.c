@@ -9,6 +9,11 @@ struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize)
 	if(ctl == 0){
 		goto err;
 	}
+	ctl->map = (char *)memman_alloc_4k(man,xsize * ysize);
+	if(ctl->map == 0){
+		memman_free_4k(man ,ctl,sizeof(struct STCTL));
+		goto err;
+	}
 	int i;
 	ctl->vram = vram;
 	ctl->xsize = xsize;
@@ -16,6 +21,8 @@ struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize)
 	ctl->top = -1;
 	for(i = 0 ; i <MAX_SHEETS ; i++){
 		ctl->sheet0[i].flags = SHEET_NOT_USED; /*标记成 未使用*/
+		ctl->sheet0[i].ctl = ctl;
+		ctl->sheet0[i].sid = i;
 	}
 err:
 	return ctl;
@@ -65,9 +72,7 @@ void sheet_updown(struct SHEET *sht,int height)
 	if(old == height){
 		return;
 	}
-	if(height >= MAX_SHEETS){
-		return;
-	}
+	
 	
 	
 	/*Sheet up*/
@@ -79,7 +84,7 @@ void sheet_updown(struct SHEET *sht,int height)
 			}
 			ctl->sheets[height] = sht;
 		}else{
-			for(i = ctl->top; i >= height ; i--){
+			for(i = height; i < ctl->top ; i++){
 				ctl->sheets[i + 1] = ctl->sheets[i];
 				ctl->sheets[i + 1]->height = i + 1;
 			}
@@ -87,22 +92,27 @@ void sheet_updown(struct SHEET *sht,int height)
 			ctl->top ++;
 			
 		}
-		sheet_refresh(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize);
+		sheet_refresh_map(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize,old);
+		sheet_refresh_sub(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize,old,sht->height);
 	}else if(old > height){	/*Sheet down */
 		if(height >= 0 ){
-			for(i = old ; i < height ; i --){
-				ctl->sheets[i] = ctl->sheets[i + 1];
+			for(i = old ; i > height ; i --){
+				ctl->sheets[i] = ctl->sheets[i - 1];
 				ctl->sheets[i]->height = i;
 			}
 			ctl->sheets[height] = sht;
+			sheet_refresh_map(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0  + sht->bysize,sht->height + 1);
+			sheet_refresh_sub(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0  + sht->bysize,sht->height + 1,old);
 		}else{/*隐藏当前图层*/
 			for(i = old; i < ctl->top ; i++){
 				ctl->sheets[i] = ctl->sheets[i + 1];
-				ctl->sheets[i] = i;
+				ctl->sheets[i]->height = i;
 			}
 			ctl->top --;
+			sheet_refresh_map(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize,0);
+			sheet_refresh_sub(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize,0,ctl->top);
 		}
-		sheet_refresh(ctl,sht->vx0,sht->vy0,sht->vx0 + sht->bxsize,sht->vy0 + sht->bysize);
+		
 	}
 	return;
 
@@ -110,57 +120,91 @@ void sheet_updown(struct SHEET *sht,int height)
 }
 
 
-void sheet_refresh(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1)
+void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
-	int h;
-	struct SHEET *sht;
-	for(h = 0 ; h <= ctl->top ; h++){
-		sht = ctl->sheets[h];
-		sheet_refresh_sub(sht,vx0,vy0,vx1,vy1);
+	
+	if(sht->height >= 0 ){
+		sheet_refresh_sub(sht->ctl,bx0 + sht->vx0,by0 + sht->vy0,bx1 + sht->vx0,by1 + sht->vy0,sht->height,sht->height);
 	}
+	
 }
 
-void sheet_refresh_sub(struct SHEET *sht, int vx0, int vy0, int vx1, int vy1)
+void sheet_refresh_sub(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1,int h0,int h1)
 {
-	int by0,bx0,by1,bx1,by,bx, vy,vx,notOutOfScreen;
-	struct STCTL *ctl = sht->ctl;
+	int h,by0,bx0,by1,bx1,by,bx, vy,vx,notOutOfScreen;
 	unsigned char *buf,color,*vram = ctl->vram;
-	by0 = vy0 - sht->vy0;
-	bx0 = vx0 - sht->vx0;
-	by1 = vy1 - sht->vy0;
-	bx1 = vx1 - sht->vx0;
-	
-	if(bx0 < 0) {bx0 = 0; }
-	if(by0 < 0) {by0 = 0; }
-	if(bx1 > sht->bxsize) {bx1 = sht->bxsize; }
-	if(by1 > sht->bysize) {by1 = sht->bysize; }
+	struct SHEET *sht;
+	for(h = h0 ; h <= h1 ; h++){
+		sht = ctl->sheets[h];
+		by0 = vy0 - sht->vy0;
+		bx0 = vx0 - sht->vx0;
+		by1 = vy1 - sht->vy0;
+		bx1 = vx1 - sht->vx0;
 		
-	buf = sht->buf;
-	for(by = by0 ;by < by1 ; by++){
-		vy = sht->vy0 + by;
-		for(bx = bx0 ; bx < bx1 ; bx ++){
-			vx = sht->vx0 + bx;
-			color = buf[by * sht->bxsize + bx];
-			notOutOfScreen = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
-			if(notOutOfScreen){
-				if(color != sht->col_inv){
-					vram[vy * ctl->xsize + vx] = color;
+		if(bx0 < 0) {bx0 = 0; }
+		if(by0 < 0) {by0 = 0; }
+		if(bx1 > sht->bxsize) {bx1 = sht->bxsize; }
+		if(by1 > sht->bysize) {by1 = sht->bysize; }
+			
+		buf = sht->buf;
+		for(by = by0 ;by < by1 ; by++){
+			vy = sht->vy0 + by;
+			for(bx = bx0 ; bx < bx1 ; bx ++){
+				vx = sht->vx0 + bx;
+				color = buf[by * sht->bxsize + bx];
+				notOutOfScreen = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
+				if(notOutOfScreen && ctl->map[vy * ctl->xsize + vx] == sht->sid){
+					if(color != sht->col_inv){
+						vram[vy * ctl->xsize + vx] = color;
+					}
 				}
 			}
 		}
 	}
-	
 }
-
+void sheet_refresh_map(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1,int h0)
+{
+	int h,by0,bx0,by1,bx1,by,bx, vy,vx,notOutOfScreen;
+	unsigned char *buf,*map,color,*vram = ctl->vram;
+	struct SHEET *sht;
+	map = ctl->map;
+	for(h = h0 ; h <= ctl->top ; h++){
+		sht = ctl->sheets[h];
+		by0 = vy0 - sht->vy0;
+		bx0 = vx0 - sht->vx0;
+		by1 = vy1 - sht->vy0;
+		bx1 = vx1 - sht->vx0;
+		
+		if(bx0 < 0) {bx0 = 0; }
+		if(by0 < 0) {by0 = 0; }
+		if(bx1 > sht->bxsize) {bx1 = sht->bxsize; }
+		if(by1 > sht->bysize) {by1 = sht->bysize; }
+			
+		buf = sht->buf;
+		for(by = by0 ;by < by1 ; by++){
+			vy = sht->vy0 + by;
+			for(bx = bx0 ; bx < bx1 ; bx ++){
+				vx = sht->vx0 + bx;
+				color = buf[by * sht->bxsize + bx];
+				notOutOfScreen = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
+				if(notOutOfScreen && color != sht->col_inv){
+					map[vy * ctl->xsize + vx] = sht->sid;
+				}
+			}
+		}
+	}
+}
 void sheet_slide(struct SHEET *sht, int vx0, int vy0)
 {
 	int oldx = sht->vx0,oldy = sht->vy0;
-	struct STCTL *ctl = sht->ctl;
 	sht->vx0 = vx0;
 	sht->vy0 = vy0;
 	if(sht->flags >= 0){
-		sheet_refresh(ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize);
-		sheet_refresh(ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize);
+		sheet_refresh_map(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0);
+		sheet_refresh_map(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height);
+		
+		sheet_refresh_sub(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0,sht->height - 1);
+		sheet_refresh_sub(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height,sht->height);
 	}
 	return;
 }

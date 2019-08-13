@@ -16,9 +16,9 @@
 		
 		
 		;’†’f”Ÿ”
-		GLOBAL _asm_inthandler21, _asm_inthandler2c
+		GLOBAL _asm_inthandler20,_asm_inthandler21, _asm_inthandler2c
 
-		EXTERN _inthandler21,_inthandler2c
+		EXTERN _inthandler20,_inthandler21,_inthandler2c
 		
 ; ˆÈ‰º‚ÍÀÛ‚ÌŠÖ”
 
@@ -83,6 +83,22 @@ _load_idtr: ;void load_idtr(lint limit,int addr);
 	mov [esp + 6],ax ;“¯load_gdtr
 	lidt [esp + 6]
 	ret
+
+_asm_inthandler20:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler20
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
 
 _asm_inthandler21:
 		PUSH	ES

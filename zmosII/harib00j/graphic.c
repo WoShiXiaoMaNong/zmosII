@@ -76,7 +76,7 @@ void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,cha
 	int i,j;
 	char *vram_temp, font_temp;
 	for(i = 0; i < 16 ; i++){
-		vram_temp = &(vram[(y + i) * xsize + x]);
+		vram_temp = vram + (y + i) * xsize + x;
 		font_temp = font[i];
 		j = 0x80;
 		while(j > 0){

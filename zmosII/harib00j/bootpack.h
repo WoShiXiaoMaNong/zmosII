@@ -88,16 +88,22 @@ struct MEMMAN{
 /*sheet.c*/
 struct SHEET{
 	unsigned char *buf;
+	int sid;
 	struct STCTL *ctl;
 	int bxsize,bysize, vx0,vy0,col_inv,height,flags;
 };
 
 
 struct STCTL{
-	unsigned char *vram;
+	unsigned char *vram, *map;
 	int xsize,ysize,top;
 	struct SHEET *sheets[MAX_SHEETS];
 	struct SHEET sheet0[MAX_SHEETS];
+};
+
+/*timer.c*/
+struct TIMERCTL{
+	unsigned int count;
 };
 
 //nas functions
@@ -113,6 +119,7 @@ void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0); 
+void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
@@ -138,8 +145,9 @@ struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize);
 struct SHEET *sheet_alloc(struct STCTL *ctl);
 void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_inv);
 void sheet_updown(struct SHEET *sht,int height);
-void sheet_refresh(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1);
-void sheet_refresh_sub(struct SHEET *sht, int vx0, int vy0, int vx1, int vy1);
+void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1);
+void sheet_refresh_sub(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1,int h0,int h1);
+void sheet_refresh_map(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1,int h0);
 void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 //dsctbl.c
@@ -183,6 +191,11 @@ void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
 int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
 int fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+/*timer.c*/
+void init_pit(void);
+void inthandler20(int *esp);
+
 
 /*mouse.c*/
 struct MOUSE_DESC{
