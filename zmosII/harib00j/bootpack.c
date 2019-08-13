@@ -122,13 +122,12 @@ void HariMain(void)
 	sheet_slide(sheet_back, 0,0);
 	unsigned data;
 	while(1){
-		countForTest++;
 		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,75);
-		sprintf(s,"Count : %010d",countForTest);
+		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
 		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
 		
-		sprintf(s,"Timer : %05ds",timerctl.count / 100);
-		putfont8_string(windows_buf,sheet_windows->bxsize,5, 50,COL8_840000,s );
+		//sprintf(s,"Timer : %05ds",timerctl.count / 100);
+		//putfont8_string(windows_buf,sheet_windows->bxsize,5, 50,COL8_840000,s );
 		sheet_refresh(sheet_windows,5, 28, 149,75);
 		io_cli();
 		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
