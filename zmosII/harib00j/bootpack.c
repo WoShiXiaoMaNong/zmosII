@@ -120,7 +120,6 @@ void HariMain(void)
 	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	sheet_slide(sheet_back, 0,0);
-	//sheet_refresh(sheetctl,0,0,binfo->scrnx,binfo->scrny);
 	unsigned data;
 	while(1){
 		countForTest++;
