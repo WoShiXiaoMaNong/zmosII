@@ -2,55 +2,6 @@
 #include "bootpack.h"
 
 extern struct TIMERCTL timerctl;
-void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
-{
-	static char closebtn[14][16] = {
-		"ooooooooooooooo@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQ@@QQQQ@@QQ$@",
-		"oQQQQ@@QQ@@QQQ$@",
-		"oQQQQQ@@@@QQQQ$@",
-		"oQQQQQQ@@QQQQQ$@",
-		"oQQQQQ@@@@QQQQ$@",
-		"oQQQQ@@QQ@@QQQ$@",
-		"oQQQ@@QQQQ@@QQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"o$$$$$$$$$$$$$$@",
-		"@@@@@@@@@@@@@@@@"
-	};
-	int x,y;
-	char color;
-	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
-	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
-	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
-	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         1,         ysize - 2);
-	boxfill8(buf, xsize, COL8_848484, xsize - 2, 1,         xsize - 2, ysize - 2);
-	boxfill8(buf, xsize, COL8_000000, xsize - 1, 0,         xsize - 1, ysize - 1);
-	boxfill8(buf, xsize, COL8_C6C6C6, 2,         2,         xsize - 3, ysize - 3);
-	boxfill8(buf, xsize, COL8_000084, 3,         3,         xsize - 4, 20       );
-	boxfill8(buf, xsize, COL8_848484, 1,         ysize - 2, xsize - 2, ysize - 2);
-	boxfill8(buf, xsize, COL8_000000, 0,         ysize - 1, xsize - 1, ysize - 1);
-	putfont8_string(buf, xsize, 24, 4, COL8_C6C6C6, title);
-	
-	for(y = 0 ; y < 14; y++){
-		for(x = 0 ; x < 16 ; x++){
-			color = closebtn[y][x];
-			if(color == 'Q'){
-				color = COL8_C6C6C6;
-			}else if(color == '@'){
-				color = COL8_000000;
-			}else if(color == '$'){
-				color = COL8_848484;
-			}else{
-				color = COL8_FFFFFF;
-			}
-			/*定位 close btn 到右上角*/
-			buf[(y + 5) * xsize + (xsize - 21 +x)] = color;
-		}
-	}
-}
 
 
 void HariMain(void)
@@ -69,7 +20,10 @@ void HariMain(void)
 	fifo8_init(&keyfifo,keybuff,36);
 	fifo8_init(&mousefifo,mousebuff,36);
 	
+	
 	init_pit(); /*初始化定时器芯片，每秒100次*/
+	
+	
 	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
 	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
@@ -84,6 +38,18 @@ void HariMain(void)
 	memman_init(man);
 	memman_free(man,0x00001000,0x009e000);
 	memman_free(man,0x00400000,mem_total - 0x00400000);
+	
+	/*设置定时器*/
+	unsigned char timerbuff[8],timerbuff2[8];
+	struct TIMER *timer = timer_alloc();
+	struct FIFO8 *timerfifo = memman_alloc_4k(man, sizeof(struct FIFO8));
+	fifo8_init(timerfifo,timerbuff,8);
+	settime(timer,130,timerfifo,1);
+	
+	struct TIMER *timer2 = timer_alloc();
+	struct FIFO8 *timerfifo2 = memman_alloc_4k(man, sizeof(struct FIFO8));
+	fifo8_init(timerfifo2,timerbuff2,8);
+	settime(timer2,200,timerfifo2,1);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -125,16 +91,38 @@ void HariMain(void)
 		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,75);
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
 		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
-		
-		//sprintf(s,"Timer : %05ds",timerctl.count / 100);
-		//putfont8_string(windows_buf,sheet_windows->bxsize,5, 50,COL8_840000,s );
 		sheet_refresh(sheet_windows,5, 28, 149,75);
 		io_cli();
-		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
+		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(timerfifo)+ fifo8_status(timerfifo2) )== 0){
 			io_stihlt();
 			//io_sti();
 		}else{
-			if( fifo8_status(&keyfifo) != 0){
+			if(fifo8_status(timerfifo) != 0){
+				data = fifo8_get(timerfifo);
+				io_sti();
+				boxfill8(back_buf, binfo->scrnx, COL8_008484, 20, 16, 10 * 8 + 20,31);
+				sprintf(s,"timere:%02X",data);
+				
+				if(data == 1){
+					putfont8_string(back_buf,binfo->scrnx,20,16,COL8_FFFF00,s );
+					settime(timer,50,timerfifo,0);
+				}else{
+					settime(timer,50,timerfifo,1);
+				};
+				sheet_refresh(sheet_back,20, 16, 10 * 8 + 20,31);
+			}else if(fifo8_status(timerfifo2) != 0){
+				data = fifo8_get(timerfifo2);
+				io_sti();
+				boxfill8(back_buf, binfo->scrnx, COL8_008484, 110, 16, 10 * 8 + 110,31);
+				sprintf(s,"timere2:%02X",data);
+				if(data == 1){
+					putfont8_string(back_buf,binfo->scrnx,110,16,COL8_FFFFFF,s );
+					settime(timer2,50,timerfifo2,0);
+				}else{
+					settime(timer2,50,timerfifo2,1);
+				};
+				sheet_refresh(sheet_back,110, 16, 10 * 8 + 110,31);
+			}else if( fifo8_status(&keyfifo) != 0){
 				data = fifo8_get(&keyfifo);
 				io_sti();
 			
