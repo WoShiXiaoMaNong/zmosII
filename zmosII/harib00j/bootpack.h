@@ -213,7 +213,7 @@ void init_pit(void);
 void inthandler20(int *esp);
 void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
 struct TIMER * timer_alloc(void);
-
+void timer_free(struct TIMER *timer);
 /*mouse.c*/
 struct MOUSE_DESC{
 	unsigned char buf[3],phase;

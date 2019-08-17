@@ -69,10 +69,17 @@ struct TIMER *timer_alloc(void)
 	}
 	return 0;
 }
-
+void timer_free(struct TIMER *timer)
+{
+	
+}
 
 void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data)
 {
+	if(timer->flag == TIMER_NOT_USED){
+		return;
+	}
+	
 	timer->timeout = timeout + timerctl.count;
 	timer->fifo = fifo;
 	timer->data = data;
