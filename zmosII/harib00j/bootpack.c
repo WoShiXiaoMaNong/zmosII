@@ -40,16 +40,16 @@ void HariMain(void)
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
 	/*设置定时器*/
-	unsigned char timerbuff[8],timerbuff2[8];
-	struct TIMER *timer = timer_alloc();
+	unsigned char timerbuff[8];
 	struct FIFO8 *timerfifo = memman_alloc_4k(man, sizeof(struct FIFO8));
 	fifo8_init(timerfifo,timerbuff,8);
-	settime(timer,130,timerfifo,1);
 	
+	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
-	struct FIFO8 *timerfifo2 = memman_alloc_4k(man, sizeof(struct FIFO8));
-	fifo8_init(timerfifo2,timerbuff2,8);
-	settime(timer2,200,timerfifo2,1);
+	
+	
+	settime(timer,130,timerfifo,1);
+	settime(timer2,200,timerfifo,2);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -88,41 +88,38 @@ void HariMain(void)
 	sheet_slide(sheet_back, 0,0);
 	unsigned data;
 	while(1){
-		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,75);
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
-		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
-		sheet_refresh(sheet_windows,5, 28, 149,75);
+		putfont8_string_sht(sheet_windows,5,28,COL8_FFFFFF,COL8_C6C6C6 , s,18);
+		
 		io_cli();
-		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(timerfifo)+ fifo8_status(timerfifo2) )== 0){
+		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(timerfifo) )== 0){
 			io_stihlt();
 			//io_sti();
 		}else{
 			if(fifo8_status(timerfifo) != 0){
 				data = fifo8_get(timerfifo);
 				io_sti();
-				
 				sprintf(s,"timere:%02X",data);
 				
-				if(data == 1){
-					putfont8_string_sht(sheet_back,20, 16,COL8_FFFF00,COL8_008484 , s,10);
+				if(data == 1 || data == 0){
+					if(data == 1){
+					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,10);
 					settime(timer,50,timerfifo,0);
-				}else{
-					putfont8_string_sht(sheet_back,20, 16,COL8_FFFF00,COL8_008484 , "",10);
-					settime(timer,50,timerfifo,1);
-				};
-				sheet_refresh(sheet_back,20, 16, 10 * 8 + 20,31);
-			}else if(fifo8_status(timerfifo2) != 0){
-				data = fifo8_get(timerfifo2);
-				io_sti();
-				sprintf(s,"timere2:%02X",data);
-				if(data == 1){
-					putfont8_string_sht(sheet_back,110,16,COL8_FFFFFF,COL8_008484 , s,10);
-					settime(timer2,50,timerfifo2,0);
-				}else{
-					putfont8_string_sht(sheet_back,110,16,COL8_FFFFFF,COL8_008484 ,"",10);
-					settime(timer2,50,timerfifo2,1);
-				};
-				sheet_refresh(sheet_back,110, 16, 10 * 8 + 110,31);
+					}else{
+						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",10);
+						settime(timer,50,timerfifo,1);
+					};
+					
+				}else if ( data == 2 || data == 3){ 
+					if(data == 2){
+						putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 , s,10);
+						settime(timer2,50,timerfifo,3);
+					}else{
+						putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 ,"",10);
+						settime(timer2,50,timerfifo,2);
+					};
+				}
+				
 			}else if( fifo8_status(&keyfifo) != 0){
 				data = fifo8_get(&keyfifo);
 				io_sti();
@@ -150,11 +147,8 @@ void HariMain(void)
 					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_008484 , s,50);
 					mx += mdec.x;
 					my += mdec.y;
-					
 					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);
-					
 					putfont8_string_sht(sheet_back,0,0,COL8_FFFFFF,COL8_008484 , s,50);
-					
 					sheet_slide(sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					
 				}
