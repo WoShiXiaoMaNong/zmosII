@@ -112,12 +112,15 @@ void HariMain(void)
 					
 				}else if ( data == 2 || data == 3){ 
 					if(data == 2){
-						putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 , s,10);
+						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 , s,10);
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_FFFFFF,110,150,111,166);
 						settime(timer2,50,timerfifo,3);
 					}else{
-						putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 ,"",10);
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_008484,110,150,111,166);
+						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 ,"",10);
 						settime(timer2,50,timerfifo,2);
 					};
+					sheet_refresh(sheet_back, 110,150,111,166);
 				}
 				
 			}else if( fifo8_status(&keyfifo) != 0){
