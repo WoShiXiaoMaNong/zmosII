@@ -100,36 +100,34 @@ void HariMain(void)
 			if(fifo8_status(timerfifo) != 0){
 				data = fifo8_get(timerfifo);
 				io_sti();
-				boxfill8(back_buf, binfo->scrnx, COL8_008484, 20, 16, 10 * 8 + 20,31);
+				
 				sprintf(s,"timere:%02X",data);
 				
 				if(data == 1){
-					putfont8_string(back_buf,binfo->scrnx,20,16,COL8_FFFF00,s );
+					putfont8_string_sht(sheet_back,20, 16,COL8_FFFF00,COL8_008484 , s,10);
 					settime(timer,50,timerfifo,0);
 				}else{
+					putfont8_string_sht(sheet_back,20, 16,COL8_FFFF00,COL8_008484 , "",10);
 					settime(timer,50,timerfifo,1);
 				};
 				sheet_refresh(sheet_back,20, 16, 10 * 8 + 20,31);
 			}else if(fifo8_status(timerfifo2) != 0){
 				data = fifo8_get(timerfifo2);
 				io_sti();
-				boxfill8(back_buf, binfo->scrnx, COL8_008484, 110, 16, 10 * 8 + 110,31);
 				sprintf(s,"timere2:%02X",data);
 				if(data == 1){
-					putfont8_string(back_buf,binfo->scrnx,110,16,COL8_FFFFFF,s );
+					putfont8_string_sht(sheet_back,110,16,COL8_FFFFFF,COL8_008484 , s,10);
 					settime(timer2,50,timerfifo2,0);
 				}else{
+					putfont8_string_sht(sheet_back,110,16,COL8_FFFFFF,COL8_008484 ,"",10);
 					settime(timer2,50,timerfifo2,1);
 				};
 				sheet_refresh(sheet_back,110, 16, 10 * 8 + 110,31);
 			}else if( fifo8_status(&keyfifo) != 0){
 				data = fifo8_get(&keyfifo);
 				io_sti();
-			
-				boxfill8(back_buf, binfo->scrnx, COL8_008484, 0, 16, 15,31);
 				sprintf(s,"%02X",data);
-				putfont8_string(back_buf,binfo->scrnx,0,16,COL8_FFFFFF,s );
-				sheet_refresh(sheet_back,0,16,15,31);
+				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
 			}else if( fifo8_status(&mousefifo) != 0){
 				data = fifo8_get(&mousefifo);
 				io_sti();
@@ -149,17 +147,13 @@ void HariMain(void)
 						s[14] = 'C';
 					}
 					
-					boxfill8(back_buf, binfo->scrnx, COL8_008484, 32, 17, 32 + 50* 8 -1,31);
-					putfont8_string(back_buf,binfo->scrnx,32,17,COL8_FFFFFF,s );
-					sheet_refresh(sheet_back, 32, 17, 32 + 50* 8 -1,31);
-					
+					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_008484 , s,50);
 					mx += mdec.x;
 					my += mdec.y;
 					
 					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);
-					boxfill8(back_buf, binfo->scrnx, COL8_008484,  0, 0, 80 + 50* 8 -1,15);
-					putfont8_string(back_buf,binfo->scrnx,1,1,COL8_FFFFFF,s );
-					sheet_refresh(sheet_back,  0, 0, 80 + 50* 8 -1,15);
+					
+					putfont8_string_sht(sheet_back,0,0,COL8_FFFFFF,COL8_008484 , s,50);
 					
 					sheet_slide(sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					

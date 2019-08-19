@@ -153,6 +153,7 @@ void init_mouse_cursor8(char *mouse,char back_ground_color);
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
+void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
 void create_windows8(unsigned char *buf,int xsize,int ysize,char *title);
 

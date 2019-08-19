@@ -104,6 +104,13 @@ void init_mouse_cursor8(char *mouse,char back_ground_color)
 }
 
 
+void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength)
+{
+	boxfill8(sht->buf, sht->bxsize, back_ground_color,x, y, x + 8 * strLength , y + 16);
+	putfont8_string(sht->buf,sht->bxsize,x,y,color,str );
+	sheet_refresh(sht,x, y, x + 8 * strLength , y + 16);
+}
+
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg)
 {
 	int x_temp = x;
