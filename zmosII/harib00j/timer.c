@@ -18,14 +18,86 @@ void init_pit(void)
 	io_out8(PIT_CTL,0x34);
 	io_out8(PIT_CNT0,0x9c);//中断周期低8位
 	io_out8(PIT_CNT0,0x2e);//中断周期高8位。
+	timerctl.count = 0;
+	timerctl.using = 0;
+	
+	int i;
+	for(i = 0 ; i < MAX_TIMER ; i++){
+		timerctl.timer0[i].flag = TIMER_NOT_USED;
+	}
+	
 	return;
 }
+/*
+struct TIMER{
+	unsigned int timeout,flag;
+	struct FIFO8 *fifo;
+	unsigned char data;
+};
 
+struct TIMERCTL{
+	unsigned int count,using;
+	struct TIMER timers[MAX_TIMER];
+};
+*/
 void inthandler20(int *esp)
 {
 	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
-	
 	timerctl.count++;
+	int i;
+	for(i = 0 ; i < timerctl.using ; i++){
+		if( timerctl.timers[i]->timeout <= timerctl.count ){
+			fifo8_put(timerctl.timers[i]->fifo,timerctl.timers[i]->data);
+			timerctl.timers[i] = timerctl.timers[i + 1];
+		}else{
+			break;
+		}
+	}
+	timerctl.using -= i;
 	
 	return;
 }
+
+struct TIMER *timer_alloc(void)
+{
+	int i;
+	for(i = 0 ; i < MAX_TIMER ; i++){
+		if (timerctl.timer0[i].flag == TIMER_NOT_USED){
+			timerctl.timer0[i].flag = TIMER_USED;
+			return & (timerctl.timer0[i]);
+		}
+	}
+	return 0;
+}
+void timer_free(struct TIMER *timer)
+{
+	
+}
+
+void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data)
+{
+	if(timer->flag == TIMER_NOT_USED){
+		return;
+	}
+	
+	timer->timeout = timeout + timerctl.count;
+	timer->fifo = fifo;
+	timer->data = data;
+	int i,j;
+	for(i = 0 ; i < timerctl.using ; i++){
+		if( timerctl.timers[i]->timeout >= timer->timeout ){
+			break;
+		}
+	}
+	for(j = timerctl.using ; j >= i ;j--){
+		timerctl.timers[j] = timerctl.timers[j - 1];
+	}
+	timerctl.timers[i] = timer;
+	timerctl.using ++;
+	return;
+}
+
+
+
+
+

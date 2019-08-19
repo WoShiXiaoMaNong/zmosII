@@ -36,12 +36,16 @@
 /*Memory.c config */
 #define MEMMAN_FREES		4090
 #define MEMMAN_ADDR			0x003c0000
+
 /*sheet.c*/
 #define MAX_SHEETS	256
 #define SHEET_USED	1
 #define SHEET_NOT_USED	0
 
-
+/*timer.c*/
+#define MAX_TIMER	256
+#define TIMER_USED	1
+#define TIMER_NOT_USED	0
 
 
 #define ADDR_BOOTINFO 0x0ff0
@@ -102,8 +106,16 @@ struct STCTL{
 };
 
 /*timer.c*/
+struct TIMER{
+	unsigned int timeout,flag;
+	struct FIFO8 *fifo;
+	unsigned char data;
+};
+
 struct TIMERCTL{
-	unsigned int count;
+	unsigned int count,using;
+	struct TIMER timer0[MAX_TIMER];
+	struct TIMER *timers[MAX_TIMER];
 };
 
 //nas functions
@@ -123,6 +135,9 @@ void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
+
+
+
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -139,6 +154,7 @@ void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,cha
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
+void create_windows8(unsigned char *buf,int xsize,int ysize,char *title);
 
 /*sheet.c*/
 struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize);
@@ -195,8 +211,9 @@ int fifo8_status(struct FIFO8 *fifo8);
 /*timer.c*/
 void init_pit(void);
 void inthandler20(int *esp);
-
-
+void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
+struct TIMER * timer_alloc(void);
+void timer_free(struct TIMER *timer);
 /*mouse.c*/
 struct MOUSE_DESC{
 	unsigned char buf[3],phase;
