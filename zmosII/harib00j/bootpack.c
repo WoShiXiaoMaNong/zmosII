@@ -91,6 +91,8 @@ void HariMain(void)
 			//io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
+			sprintf(s,"d:%04X",data);
+			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
 			io_sti();
 			if( data < 256){
 				sprintf(s,"timere:%02X",data);
@@ -123,8 +125,7 @@ void HariMain(void)
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
 			}else if(data >= 512 && data <768 ){
 				data = data - 512;
-				sprintf(s,"d:%04X",data);
-				putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
+				
 				if( mouse_decode(&mdec, data) == 1){
 					sprintf(s,"Mouse action[lcr %4d %4d]",mdec.x,mdec.y);
 					

@@ -31,9 +31,9 @@ void init_keyboard(struct FIFO32 *fifo, int data0)
 //Keyboard
 void inthandler21(int *esp)
 {
-	unsigned int data;
+	int data;
 	io_out8(PIC0_OCW2,0x60 + 1); //通知 主PIC IRQ-1 中断处理完毕。
 	data = io_in8(PORT_KEYDAT);
-	fifo32_put(keyfifo,data+ keydata0);
+	fifo32_put(keyfifo,data + keydata0);
 	return;
 }
