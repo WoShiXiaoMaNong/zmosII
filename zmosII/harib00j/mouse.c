@@ -13,7 +13,7 @@ void inthandler2c(int *esp)
 	io_out8(PIC0_OCW2,0x60 + 2); //通知 主PIC IRQ-2 中断处理完毕。
 	
 	data = io_in8(PORT_KEYDAT);
-	fifo32_put(mousefifo,data + 100);
+	fifo32_put(mousefifo,data + mousedata0);
 	
 	return;
 }

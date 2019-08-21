@@ -26,8 +26,8 @@ void HariMain(void)
 	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
 	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
-	init_keyboard(&buff_fifo,768);
-	enable_mouse(&mdec,&buff_fifo,0);
+	init_keyboard(&buff_fifo,256);
+	enable_mouse(&mdec,&buff_fifo,512);
 	init_palette();
 	
 	
@@ -39,7 +39,7 @@ void HariMain(void)
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
 	/*设置定时器*/
-	timer_init(&buff_fifo,512);
+	timer_init(&buff_fifo,0);
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
 	settime(timer,130,1);
@@ -91,10 +91,8 @@ void HariMain(void)
 			//io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
-			
 			io_sti();
-			if( data == -1000){
-				data = data - 512;
+			if( data < 256){
 				sprintf(s,"timere:%02X",data);
 				
 				if(data == 1 || data == 0){
@@ -119,13 +117,13 @@ void HariMain(void)
 					sheet_refresh(sheet_back, 110,150,111,166);
 				}
 				
-			}else if( data == -1000 ){
-				data = data - 768;
+			}else if( data >= 256 && data <512 ){
+				data = data - 256;
 				sprintf(s,"%02X",data);
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
-			}else {
-				data = data - 100;
-				sprintf(s,"data2:%04X",data);
+			}else if(data >= 512 && data <768 ){
+				data = data - 512;
+				sprintf(s,"d:%04X",data);
 				putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
 				if( mouse_decode(&mdec, data) == 1){
 					sprintf(s,"Mouse action[lcr %4d %4d]",mdec.x,mdec.y);

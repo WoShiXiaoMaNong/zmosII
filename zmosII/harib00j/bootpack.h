@@ -229,7 +229,7 @@ void timer_free(struct TIMER *timer);
 void timer_init(struct FIFO32 *fifo,int data0);
 /*mouse.c*/
 struct MOUSE_DESC{
-	unsigned char buf[3],phase;
+	int buf[3],phase;
 	int x,y,btn;
 };
 void inthandler2c(int *esp);
