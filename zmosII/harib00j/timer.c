@@ -6,6 +6,10 @@
 
 struct TIMERCTL timerctl;
 
+struct FIFO32 *timerfifo;
+int timerdata0;
+
+
 void init_pit(void)
 {
 	/*定时器8254芯片固定设定方法
@@ -47,12 +51,14 @@ void inthandler20(int *esp)
 	int i;
 	for(i = 0 ; i < timerctl.using ; i++){
 		if( timerctl.timers[i]->timeout <= timerctl.count ){
-			fifo8_put(timerctl.timers[i]->fifo,timerctl.timers[i]->data);
+			fifo32_put(timerctl.timers[i]->fifo,timerctl.timers[i]->data + timerdata0);
 			timerctl.timers[i] = timerctl.timers[i + 1];
 		}else{
 			break;
 		}
 	}
+	
+	
 	timerctl.using -= i;
 	
 	return;
@@ -64,6 +70,7 @@ struct TIMER *timer_alloc(void)
 	for(i = 0 ; i < MAX_TIMER ; i++){
 		if (timerctl.timer0[i].flag == TIMER_NOT_USED){
 			timerctl.timer0[i].flag = TIMER_USED;
+			timerctl.timer0[i].fifo = timerfifo;
 			return & (timerctl.timer0[i]);
 		}
 	}
@@ -71,17 +78,22 @@ struct TIMER *timer_alloc(void)
 }
 void timer_free(struct TIMER *timer)
 {
-	
+	//tbd
 }
 
-void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data)
+void timer_init(struct FIFO32 *fifo,int data0)
+{
+	timerfifo = fifo;
+	timerdata0 = data0;
+}
+
+void settime(struct TIMER *timer,unsigned int timeout, int data)
 {
 	if(timer->flag == TIMER_NOT_USED){
 		return;
 	}
 	
 	timer->timeout = timeout + timerctl.count;
-	timer->fifo = fifo;
 	timer->data = data;
 	int i,j;
 	for(i = 0 ; i < timerctl.using ; i++){

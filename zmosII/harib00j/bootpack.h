@@ -75,8 +75,14 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
+/*fifo.c*/
 struct FIFO8{
-	unsigned char *buf;
+	char *buf;
+	int p,q,size,free,flags;	
+};
+
+struct FIFO32{
+	int *buf;
 	int p,q,size,free,flags;	
 };
 /*memory.c*/
@@ -108,7 +114,7 @@ struct STCTL{
 /*timer.c*/
 struct TIMER{
 	unsigned int timeout,flag;
-	struct FIFO8 *fifo;
+	struct FIFO32 *fifo;
 	unsigned char data;
 };
 
@@ -204,32 +210,36 @@ void init_pic(void);
 
 /*FIFO.c */
 
-void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
-int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
-int fifo8_get(struct FIFO8 *fifo8);
+void fifo8_init(struct FIFO8 *fifo8, char *buf, int size);
+int fifo8_put(struct FIFO8 *fifo8, char data);
+char fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+void fifo32_init(struct FIFO32 *fifo32,int *buf, int size);
+int fifo32_put(struct FIFO32 *fifo32,int data);
+int fifo32_get(struct FIFO32 *fifo32);
+int fifo32_status(struct FIFO32 *fifo32);
 
 /*timer.c*/
 void init_pit(void);
 void inthandler20(int *esp);
-void settime(struct TIMER *timer,unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
+void settime(struct TIMER *timer,unsigned int timeout, int data);
 struct TIMER * timer_alloc(void);
 void timer_free(struct TIMER *timer);
+void timer_init(struct FIFO32 *fifo,int data0);
 /*mouse.c*/
 struct MOUSE_DESC{
 	unsigned char buf[3],phase;
 	int x,y,btn;
 };
 void inthandler2c(int *esp);
-int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
-void enable_mouse(struct MOUSE_DESC *mdec);
-extern struct FIFO8 mousefifo;
+int mouse_decode(struct MOUSE_DESC *mdec, int data);
+void enable_mouse(struct MOUSE_DESC *mdec,struct FIFO32 *fifo, int data0);
 
 /*keyboard.c*/
-void init_keyboard(void);
+void init_keyboard(struct FIFO32 *fifo, int data0);
 void wait_KBC_sendready(void);
 void inthandler21(int *esp);
-extern struct FIFO8 keyfifo;
 
 
 /*memory.c*/

@@ -1,5 +1,10 @@
 #include "bootpack.h"
-struct FIFO8 mousefifo;
+
+
+struct FIFO32 *mousefifo;
+int mousedata0;
+
+
 
 void inthandler2c(int *esp)
 {
@@ -8,23 +13,25 @@ void inthandler2c(int *esp)
 	io_out8(PIC0_OCW2,0x60 + 2); //通知 主PIC IRQ-2 中断处理完毕。
 	
 	data = io_in8(PORT_KEYDAT);
-	fifo8_put(&mousefifo,data);
+	fifo32_put(mousefifo,data + 100);
 	
 	return;
 }
 
-void enable_mouse(struct MOUSE_DESC *mdec)
+void enable_mouse(struct MOUSE_DESC *mdec,struct FIFO32 *fifo, int data0)
 {
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD,KEYCMD_SENDTO_MOUSE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT,MOUSECMD_ENABLE);
 	mdec->phase = 0;
+	mousefifo = fifo;
+	mousedata0 = data0;
 	return;
 }
 
 
-int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data)
+int mouse_decode(struct MOUSE_DESC *mdec, int data)
 {
 		if(mdec->phase == 0){
 			if(data == 0xfa){
