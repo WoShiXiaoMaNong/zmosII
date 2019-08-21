@@ -20,13 +20,14 @@ void inthandler2c(int *esp)
 
 void enable_mouse(struct MOUSE_DESC *mdec,struct FIFO32 *fifo, int data0)
 {
+	mousefifo = fifo;
+	mousedata0 = data0;
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD,KEYCMD_SENDTO_MOUSE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT,MOUSECMD_ENABLE);
 	mdec->phase = 0;
-	mousefifo = fifo;
-	mousedata0 = data0;
+	
 	return;
 }
 

@@ -91,10 +91,12 @@ void HariMain(void)
 			//io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
+			io_sti();
+			//if(data > 3){
 			sprintf(s,"d:%04X",data);
 			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
-			io_sti();
-			if( data < 256){
+			//}
+			if( data < 20){
 				sprintf(s,"timere:%02X",data);
 				
 				if(data == 1 || data == 0){

@@ -18,12 +18,13 @@ void wait_KBC_sendready(void)
 
 void init_keyboard(struct FIFO32 *fifo, int data0)
 {
+	keydata0 = data0;
+	keyfifo = fifo;
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD,KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT,KBC_MODE);
-	keydata0 = data0;
-	keyfifo = fifo;
+	
 	return;
 }
 
@@ -34,6 +35,10 @@ void inthandler21(int *esp)
 	int data;
 	io_out8(PIC0_OCW2,0x60 + 1); //通知 主PIC IRQ-1 中断处理完毕。
 	data = io_in8(PORT_KEYDAT);
+	
+	data = data & 0xff; //只截取低8位
+	
 	fifo32_put(keyfifo,data + keydata0);
+	
 	return;
 }
