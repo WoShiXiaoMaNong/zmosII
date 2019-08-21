@@ -1,6 +1,8 @@
 #include "bootpack.h"
 
-struct FIFO8 keyfifo;
+struct FIFO32 *keyfifo;
+int keydata0;
+
 
 void wait_KBC_sendready(void)
 {
@@ -14,12 +16,15 @@ void wait_KBC_sendready(void)
 }
 
 
-void init_keyboard(void)
+void init_keyboard(struct FIFO32 *fifo, int data0)
 {
+	keydata0 = data0;
+	keyfifo = fifo;
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD,KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT,KBC_MODE);
+	
 	return;
 }
 
@@ -27,9 +32,13 @@ void init_keyboard(void)
 //Keyboard
 void inthandler21(int *esp)
 {
-	unsigned char data;
+	int data;
 	io_out8(PIC0_OCW2,0x60 + 1); //通知 主PIC IRQ-1 中断处理完毕。
 	data = io_in8(PORT_KEYDAT);
-	fifo8_put(&keyfifo,data);
+	
+	data = data & 0xff; //只截取低8位
+	
+	fifo32_put(keyfifo,data + keydata0);
+	
 	return;
 }

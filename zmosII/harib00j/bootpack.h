@@ -36,12 +36,16 @@
 /*Memory.c config */
 #define MEMMAN_FREES		4090
 #define MEMMAN_ADDR			0x003c0000
+
 /*sheet.c*/
 #define MAX_SHEETS	256
 #define SHEET_USED	1
 #define SHEET_NOT_USED	0
 
-
+/*timer.c*/
+#define MAX_TIMER	256
+#define TIMER_USED	1
+#define TIMER_NOT_USED	0
 
 
 #define ADDR_BOOTINFO 0x0ff0
@@ -71,8 +75,14 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
+/*fifo.c*/
 struct FIFO8{
-	unsigned char *buf;
+	char *buf;
+	int p,q,size,free,flags;	
+};
+
+struct FIFO32{
+	int *buf;
 	int p,q,size,free,flags;	
 };
 /*memory.c*/
@@ -102,8 +112,16 @@ struct STCTL{
 };
 
 /*timer.c*/
+struct TIMER{
+	unsigned int timeout,flag;
+	struct FIFO32 *fifo;
+	unsigned char data;
+};
+
 struct TIMERCTL{
-	unsigned int count;
+	unsigned int count,using;
+	struct TIMER timer0[MAX_TIMER];
+	struct TIMER *timers[MAX_TIMER];
 };
 
 //nas functions
@@ -123,6 +141,9 @@ void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
+
+
+
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -138,7 +159,9 @@ void init_mouse_cursor8(char *mouse,char back_ground_color);
 void putfont8(unsigned char *vram,int xsize,int x, int y,unsigned char color,char *font);
 void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char color,char c_ascii);
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
+void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
+void create_windows8(unsigned char *buf,int xsize,int ysize,char *title);
 
 /*sheet.c*/
 struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize);
@@ -187,31 +210,36 @@ void init_pic(void);
 
 /*FIFO.c */
 
-void fifo8_init(struct FIFO8 *fifo8,unsigned char *buf, int size);
-int fifo8_put(struct FIFO8 *fifo8,unsigned char data);
-int fifo8_get(struct FIFO8 *fifo8);
+void fifo8_init(struct FIFO8 *fifo8, char *buf, int size);
+int fifo8_put(struct FIFO8 *fifo8, char data);
+char fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
+
+void fifo32_init(struct FIFO32 *fifo32,int *buf, int size);
+int fifo32_put(struct FIFO32 *fifo32,int data);
+int fifo32_get(struct FIFO32 *fifo32);
+int fifo32_status(struct FIFO32 *fifo32);
 
 /*timer.c*/
 void init_pit(void);
 void inthandler20(int *esp);
-
-
+void settime(struct TIMER *timer,unsigned int timeout, int data);
+struct TIMER * timer_alloc(void);
+void timer_free(struct TIMER *timer);
+void timer_init(struct FIFO32 *fifo,int data0);
 /*mouse.c*/
 struct MOUSE_DESC{
-	unsigned char buf[3],phase;
+	int buf[3],phase;
 	int x,y,btn;
 };
 void inthandler2c(int *esp);
-int mouse_decode(struct MOUSE_DESC *mdec, unsigned char data);
-void enable_mouse(struct MOUSE_DESC *mdec);
-extern struct FIFO8 mousefifo;
+int mouse_decode(struct MOUSE_DESC *mdec, int data);
+void enable_mouse(struct MOUSE_DESC *mdec,struct FIFO32 *fifo, int data0);
 
 /*keyboard.c*/
-void init_keyboard(void);
+void init_keyboard(struct FIFO32 *fifo, int data0);
 void wait_KBC_sendready(void);
 void inthandler21(int *esp);
-extern struct FIFO8 keyfifo;
 
 
 /*memory.c*/

@@ -1,56 +1,8 @@
 #include <stdio.h>
 #include "bootpack.h"
 
+#define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
-void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
-{
-	static char closebtn[14][16] = {
-		"ooooooooooooooo@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQ@@QQQQ@@QQ$@",
-		"oQQQQ@@QQ@@QQQ$@",
-		"oQQQQQ@@@@QQQQ$@",
-		"oQQQQQQ@@QQQQQ$@",
-		"oQQQQQ@@@@QQQQ$@",
-		"oQQQQ@@QQ@@QQQ$@",
-		"oQQQ@@QQQQ@@QQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"oQQQQQQQQQQQQQ$@",
-		"o$$$$$$$$$$$$$$@",
-		"@@@@@@@@@@@@@@@@"
-	};
-	int x,y;
-	char color;
-	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
-	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
-	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
-	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         1,         ysize - 2);
-	boxfill8(buf, xsize, COL8_848484, xsize - 2, 1,         xsize - 2, ysize - 2);
-	boxfill8(buf, xsize, COL8_000000, xsize - 1, 0,         xsize - 1, ysize - 1);
-	boxfill8(buf, xsize, COL8_C6C6C6, 2,         2,         xsize - 3, ysize - 3);
-	boxfill8(buf, xsize, COL8_000084, 3,         3,         xsize - 4, 20       );
-	boxfill8(buf, xsize, COL8_848484, 1,         ysize - 2, xsize - 2, ysize - 2);
-	boxfill8(buf, xsize, COL8_000000, 0,         ysize - 1, xsize - 1, ysize - 1);
-	putfont8_string(buf, xsize, 24, 4, COL8_C6C6C6, title);
-	
-	for(y = 0 ; y < 14; y++){
-		for(x = 0 ; x < 16 ; x++){
-			color = closebtn[y][x];
-			if(color == 'Q'){
-				color = COL8_C6C6C6;
-			}else if(color == '@'){
-				color = COL8_000000;
-			}else if(color == '$'){
-				color = COL8_848484;
-			}else{
-				color = COL8_FFFFFF;
-			}
-			/*定位 close btn 到右上角*/
-			buf[(y + 5) * xsize + (xsize - 21 +x)] = color;
-		}
-	}
-}
 
 
 void HariMain(void)
@@ -60,21 +12,22 @@ void HariMain(void)
 	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	struct MOUSE_DESC mdec;
 	char s[256];
-	unsigned char keybuff[36],mousebuff[36];
+	
+	
+	struct FIFO32 buff_fifo;
+	int buff[BUF_LENGTH];
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
 	
 	init_gdtidt();
 	init_pic();
 	io_sti();
-		
-	fifo8_init(&keyfifo,keybuff,36);
-	fifo8_init(&mousefifo,mousebuff,36);
 	
 	init_pit(); /*初始化定时器芯片，每秒100次*/
 	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
 	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
-	init_keyboard();
-	enable_mouse(&mdec);
+	init_keyboard(&buff_fifo,256);
+	enable_mouse(&mdec,&buff_fifo,512);
 	init_palette();
 	
 	
@@ -84,6 +37,13 @@ void HariMain(void)
 	memman_init(man);
 	memman_free(man,0x00001000,0x009e000);
 	memman_free(man,0x00400000,mem_total - 0x00400000);
+	
+	/*设置定时器*/
+	timer_init(&buff_fifo,0);
+	struct TIMER *timer = timer_alloc();
+	struct TIMER *timer2 = timer_alloc();
+	settime(timer,130,1);
+	settime(timer2,200,2);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -120,31 +80,53 @@ void HariMain(void)
 	sprintf(s,"Total Memory : %dMB",memsize);
 	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	sheet_slide(sheet_back, 0,0);
-	unsigned data;
+	int data;
 	while(1){
-		boxfill8(windows_buf, 160, COL8_C6C6C6, 5, 28, 149,75);
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
-		putfont8_string(windows_buf,sheet_windows->bxsize,5, 28,COL8_FFFFFF,s );
+		putfont8_string_sht(sheet_windows,5,28,COL8_FFFFFF,COL8_C6C6C6 , s,18);
 		
-		//sprintf(s,"Timer : %05ds",timerctl.count / 100);
-		//putfont8_string(windows_buf,sheet_windows->bxsize,5, 50,COL8_840000,s );
-		sheet_refresh(sheet_windows,5, 28, 149,75);
 		io_cli();
-		if( (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) )== 0){
+		if( fifo32_status(&buff_fifo) == 0){
 			io_stihlt();
 			//io_sti();
 		}else{
-			if( fifo8_status(&keyfifo) != 0){
-				data = fifo8_get(&keyfifo);
-				io_sti();
-			
-				boxfill8(back_buf, binfo->scrnx, COL8_008484, 0, 16, 15,31);
+			data = fifo32_get(&buff_fifo);
+			io_sti();
+			//if(data > 3){
+			sprintf(s,"d:%04X",data);
+			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
+			//}
+			if( data < 20){
+				sprintf(s,"timere:%02X",data);
+				
+				if(data == 1 || data == 0){
+					if(data == 1){
+					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,10);
+					settime(timer,50,0);
+					}else{
+						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",10);
+						settime(timer,50,1);
+					};
+					
+				}else if ( data == 2 || data == 3){ 
+					if(data == 2){
+						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 , s,10);
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_FFFFFF,110,150,111,166);
+						settime(timer2,50,3);
+					}else{
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_008484,110,150,111,166);
+						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 ,"",10);
+						settime(timer2,50,2);
+					};
+					sheet_refresh(sheet_back, 110,150,111,166);
+				}
+				
+			}else if( data >= 256 && data <512 ){
+				data = data - 256;
 				sprintf(s,"%02X",data);
-				putfont8_string(back_buf,binfo->scrnx,0,16,COL8_FFFFFF,s );
-				sheet_refresh(sheet_back,0,16,15,31);
-			}else if( fifo8_status(&mousefifo) != 0){
-				data = fifo8_get(&mousefifo);
-				io_sti();
+				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
+			}else if(data >= 512 && data <768 ){
+				data = data - 512;
 				
 				if( mouse_decode(&mdec, data) == 1){
 					sprintf(s,"Mouse action[lcr %4d %4d]",mdec.x,mdec.y);
@@ -161,18 +143,11 @@ void HariMain(void)
 						s[14] = 'C';
 					}
 					
-					boxfill8(back_buf, binfo->scrnx, COL8_008484, 32, 17, 32 + 50* 8 -1,31);
-					putfont8_string(back_buf,binfo->scrnx,32,17,COL8_FFFFFF,s );
-					sheet_refresh(sheet_back, 32, 17, 32 + 50* 8 -1,31);
-					
+					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_008484 , s,50);
 					mx += mdec.x;
 					my += mdec.y;
-					
 					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);
-					boxfill8(back_buf, binfo->scrnx, COL8_008484,  0, 0, 80 + 50* 8 -1,15);
-					putfont8_string(back_buf,binfo->scrnx,1,1,COL8_FFFFFF,s );
-					sheet_refresh(sheet_back,  0, 0, 80 + 50* 8 -1,15);
-					
+					putfont8_string_sht(sheet_back,0,0,COL8_FFFFFF,COL8_008484 , s,50);
 					sheet_slide(sheet_mouse, mx,my);/*移动图层，并且重新绘制*/
 					
 				}
