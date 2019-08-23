@@ -72,14 +72,16 @@ void HariMain(void)
 	sheet_slide(sheet_mouse, mx,my);
 	/* init mouse end */
 	
-	
+	sheet_slide(sheet_back, 0,0);
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
-	putfont8_string(back_buf,binfo->scrnx,0,32,COL8_FF0000,s );	
+	putfont8_string_sht(sheet_back,0, 32,COL8_FF0000,COL8_008484 , s,20);
+	//putfont8_string(back_buf,binfo->scrnx,0,32,COL8_FF0000,s );	
 	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
 	sprintf(s,"Total Memory : %dMB",memsize);
-	putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
-	sheet_slide(sheet_back, 0,0);
+	
+	//putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
+	putfont8_string_sht(sheet_back,0, 50,COL8_FFFFFF,COL8_008484 , s,20);
 	int data;
 	while(1){
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
@@ -92,33 +94,31 @@ void HariMain(void)
 		}else{
 			data = fifo32_get(&buff_fifo);
 			io_sti();
-			//if(data > 3){
 			sprintf(s,"d:%04X",data);
 			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
-			//}
+			
 			if( data < 20){
 				sprintf(s,"timere:%02X",data);
 				
 				if(data == 1 || data == 0){
 					if(data == 1){
-					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,10);
+					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,9);
 					settime(timer,50,0);
 					}else{
-						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",10);
+						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50,1);
 					};
 					
 				}else if ( data == 2 || data == 3){ 
 					if(data == 2){
-						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 , s,10);
-						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_FFFFFF,110,150,111,166);
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_0000FF,111,150,111,166);
 						settime(timer2,50,3);
+						
 					}else{
-						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_008484,110,150,111,166);
-						//putfont8_string_sht(sheet_back,110,150,COL8_FFFFFF,COL8_008484 ,"",10);
+						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_008484,111,150,111,166);
 						settime(timer2,50,2);
 					};
-					sheet_refresh(sheet_back, 110,150,111,166);
+					sheet_refresh(sheet_back, 111,150,111,166);
 				}
 				
 			}else if( data >= 256 && data <512 ){
