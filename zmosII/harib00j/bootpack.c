@@ -76,6 +76,7 @@ void HariMain(void)
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
 	putfont8_string_sht(sheet_back,0, 32,COL8_FF0000,COL8_008484 , s,20);
+	putfont8_string_sht(sheet_back,0, 16,COL8_FF0000,COL8_008484 , "testset",20);
 	//putfont8_string(back_buf,binfo->scrnx,0,32,COL8_FF0000,s );	
 	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
 	sprintf(s,"Total Memory : %dMB",memsize);
@@ -143,7 +144,7 @@ void HariMain(void)
 						s[14] = 'C';
 					}
 					
-					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_008484 , s,50);
+					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_FFFF00 , s,50);
 					mx += mdec.x;
 					my += mdec.y;
 					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);

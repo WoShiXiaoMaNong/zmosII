@@ -200,8 +200,9 @@ void sheet_slide(struct SHEET *sht, int vx0, int vy0)
 	sht->vy0 = vy0;
 	if(sht->flags >= 0){
 		sheet_refresh_map(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0);
-		sheet_refresh_map(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height);
+		
 		sheet_refresh_sub(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0,sht->height - 1);
+		sheet_refresh_map(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height);
 		sheet_refresh_sub(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height,sht->height);
 	}
 	return;
