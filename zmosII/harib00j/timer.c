@@ -23,11 +23,17 @@ void init_pit(void)
 	io_out8(PIT_CNT0,0x9c);//中断周期低8位
 	io_out8(PIT_CNT0,0x2e);//中断周期高8位。
 	timerctl.count = 0;
-	timerctl.head = NULL;
+	
 	int i;
 	for(i = 0 ; i < MAX_TIMER ; i++){
 		timerctl.timer0[i].flag = TIMER_NOT_USED;
 	}
+	
+	struct TIMER *t = timer_alloc();
+	t->timeout = 0xffffffff;
+	t->flag = TIMER_USED;
+	t->next = NULL;
+	timerctl.head = t;
 	
 	return;
 }
@@ -99,30 +105,27 @@ void settime(struct TIMER *timer,unsigned int timeout, int data)
 	timer->timeout = timeout + timerctl.count;
 	timer->data = data;
 	
-	if(timerctl.head == NULL){
-		timerctl.head = timer;
-		return;
-	}
+
+	struct TIMER *current = timerctl.head;
 	
-	struct TIMER *previous = timerctl.head;
-	
-	if( timerctl.head->timeout >= timer->timeout ){
+	if( timerctl.head->next == NULL || current->timeout >= timer->timeout){
 			timerctl.head = timer;
-			timer->next = previous;
+			timer->next = current;
 			return;
 	}
 	
-	struct TIMER *current = previous->next;
+	struct TIMER *next = current->next;
 	
-	while(current != NULL){
-		if( current->timeout >= timer->timeout ){
+	while(next != NULL){
+		if(next->timeout >= timer->timeout){
 			break;
 		}
-		previous = current;
-		current = current->next;
+		current = next;
+		next = next->next;
 	}
-	previous->next = timer;
-	timer->next = current;
+	
+	current->next = timer;
+	timer->next = next;
 	
 	
 	

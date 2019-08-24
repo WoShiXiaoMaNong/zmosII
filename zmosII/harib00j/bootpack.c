@@ -144,7 +144,7 @@ void HariMain(void)
 						s[14] = 'C';
 					}
 					
-					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_FFFF00 , s,50);
+					putfont8_string_sht(sheet_back,32,17,COL8_FFFFFF,COL8_008484 , s,50);
 					mx += mdec.x;
 					my += mdec.y;
 					sprintf(s,"Mouse position[%4d:%4d],h:%d",mx,my,sheet_mouse->height);
