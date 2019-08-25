@@ -1,11 +1,12 @@
 ; haribote-os boot asm
 ; TAB=4
 
-
+;========VEBMODE LIST===========
 ;0x101  ....640 * 480 * 8bit
 ;0x103  ....800 * 600 * 8bit
 ;0x105  ....1024 * 768 * 8bit
 ;0x107  ....1280 * 1024 * 8bit
+;===============================
 VBEMODE	EQU		0x101			; 制定VBE 分辨率模式 
 BOTPAK	EQU		0x00280000		; bootpack的装?地址
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
