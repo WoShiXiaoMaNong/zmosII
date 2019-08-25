@@ -1,6 +1,12 @@
 ; haribote-os boot asm
 ; TAB=4
 
+
+;0x101  ....640 * 480 * 8bit
+;0x103  ....800 * 600 * 8bit
+;0x105  ....1024 * 768 * 8bit
+;0x107  ....1280 * 1024 * 8bit
+VBEMODE	EQU		0x101			; 制定VBE 分辨率模式 
 BOTPAK	EQU		0x00280000		; bootpack的装?地址
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
 DSKCAC0	EQU		0x00008000		; ディスクキャッシュの場所（リアルモード）
@@ -16,7 +22,57 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 		ORG		0xc200			; このプログラムがどこに読み込まれるのか
 
 ; ?示?定
-
+		;??VBE是否可用
+		;??可用的VBE信息会在?用 INT 0x10之后被写入到 ES:DI，共512字?
+		MOV		AX,0x9000
+		MOV		ES,AX
+		MOV 	DI,0
+		MOV 	AX,0x4f00
+		INT		0x10
+		CMP		AX,0x004f	;如果VBE可用，AX的???是0x004f
+		JNE		scrn320
+		
+		;??VBE版本，VBE版本低于2.0，将无法使用高分辨率。具体多少是高分辨，没有去??。
+		MOV 	AX,[ES:DI +4]
+		CMP		AX,0x200			;ax 小于 0x200 ?明版本低于2.0
+		JB		scrn320
+		
+		;??VBEMODE 是否可用
+		;如果可用，AX将等于0x004f，并且画面模式信息会被写入到ES:DI
+		MOV		CX,VBEMODE
+		MOV 	AX,0x4f01
+		INT 	0x10
+		CMP		AX,0x004f
+		JNE		scrn320
+		
+		;画面信息??
+		CMP		BYTE [ES:DI + 0x19],8
+		JNE		scrn320
+		CMP		BYTE [ES:DI + 0x1b],4
+		JNE		scrn320
+		MOV		AX,[ES:DI]
+		AND		AX,0x0080  ; 0100_0000b  ??第7位是否?1
+		JZ		scrn320		;如果第7位是0，放弃分辨率?定，使用默?320
+		
+		;?存画面信息，用于struct BOOTINFO
+		MOV		BX,VBEMODE + 0x4000
+		MOV		AX,0x4f02	
+		INT		0x10
+		
+		MOV		BYTE [VMODE],8	; 画面模式，固定是8
+		MOV		AX,[ES:DI + 0x12]
+		MOV		[SCRNX],AX
+		MOV		AX,[ES:DI + 0x14]
+		MOV		[SCRNY],AX
+		MOV		AX,[ES:DI + 0x28]
+		MOV		WORD [VRAM],AX
+		MOV		AX,[ES:DI + 0x28 + 2]
+		MOV		WORD [VRAM + 2],AX
+		
+		
+		JMP		display_setting_end
+;?置默?分辨率?320*200*8bit		
+scrn320:
 		MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
 		MOV		AH,0x00
 		INT		0x10
@@ -24,6 +80,7 @@ VRAM	EQU		0x0ff8			; ?存?存的起始地址
 		MOV		WORD [SCRNX],320
 		MOV		WORD [SCRNY],200
 		MOV		DWORD [VRAM],0x000a0000
+display_setting_end:
 
 ; キーボードのLED状態をBIOSに教えてもらう
 
