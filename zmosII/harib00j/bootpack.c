@@ -86,7 +86,7 @@ void HariMain(void)
 	int data;
 	while(1){
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
-		putfont8_string_sht(sheet_windows,5,28,COL8_FFFFFF,COL8_C6C6C6 , s,18);
+		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
 		
 		io_cli();
 		if( fifo32_status(&buff_fifo) == 0){
@@ -98,7 +98,7 @@ void HariMain(void)
 			sprintf(s,"d:%04X",data);
 			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
 			
-			if( data < 20){
+			if( data < 20){  /*各种计时器*/
 				sprintf(s,"timere:%02X",data);
 				
 				if(data == 1 || data == 0){
@@ -110,23 +110,34 @@ void HariMain(void)
 						settime(timer,50,1);
 					};
 					
-				}else if ( data == 2 || data == 3){ 
+				}else if ( data == 2 || data == 3){  //光标控制
 					if(data == 2){
-						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_0000FF,111,150,111,166);
+						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,20,48,20,64);
 						settime(timer2,50,3);
 						
 					}else{
-						boxfill8(sheet_back->buf,sheet_back->bxsize, COL8_008484,111,150,111,166);
+						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_C6C6C6,20,48,20,64);
 						settime(timer2,50,2);
 					};
-					sheet_refresh(sheet_back, 111,150,111,166);
+					sheet_refresh(sheet_windows, 20,48,20,64);
 				}
 				
-			}else if( data >= 256 && data <512 ){
+			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
 				data = data - 256;
 				sprintf(s,"%02X",data);
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
-			}else if(data >= 512 && data <768 ){
+				
+				
+				//字符输入测试 >>>>开始<<<<
+				if( data  == 0x1e){
+					putfont8_string_sht(sheet_windows,20, 48,COL8_000000,COL8_C6C6C6 , "A",1);
+				}
+				if( data  == 0x30){
+					putfont8_string_sht(sheet_windows,20, 48,COL8_000000,COL8_C6C6C6 , "B",1);
+				}
+				//字符输入测试 >>>>结束<<<<
+				
+			}else if(data >= 512 && data <768 ){/* 鼠标输入*/
 				data = data - 512;
 				
 				if( mouse_decode(&mdec, data) == 1){
