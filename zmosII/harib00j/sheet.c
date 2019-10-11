@@ -122,7 +122,6 @@ void sheet_updown(struct SHEET *sht,int height)
 
 void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
-	
 	if(sht->height >= 0 ){
 		sheet_refresh_sub(sht->ctl,bx0 + sht->vx0,by0 + sht->vy0,bx1 + sht->vx0,by1 + sht->vy0,sht->height,sht->height);
 	}
@@ -147,9 +146,9 @@ void sheet_refresh_sub(struct STCTL *ctl, int vx0, int vy0, int vx1, int vy1,int
 		if(by1 > sht->bysize) {by1 = sht->bysize; }
 			
 		buf = sht->buf;
-		for(by = by0 ;by < by1 ; by++){
+		for(by = by0 ;by <= by1 ; by++){
 			vy = sht->vy0 + by;
-			for(bx = bx0 ; bx < bx1 ; bx ++){
+			for(bx = bx0 ; bx <= bx1 ; bx ++){
 				vx = sht->vx0 + bx;
 				color = buf[by * sht->bxsize + bx];
 				notOutOfScreen = (vx >=0 && vy >= 0 && vx < (ctl->xsize) && vy < (ctl->ysize));
@@ -201,9 +200,9 @@ void sheet_slide(struct SHEET *sht, int vx0, int vy0)
 	sht->vy0 = vy0;
 	if(sht->flags >= 0){
 		sheet_refresh_map(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0);
-		sheet_refresh_map(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height);
 		
 		sheet_refresh_sub(sht->ctl,oldx, oldy,oldx + sht->bxsize, oldy + sht->bysize,0,sht->height - 1);
+		sheet_refresh_map(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height);
 		sheet_refresh_sub(sht->ctl,vx0, vy0,vx0 + sht->bxsize, vy0 + sht->bysize,sht->height,sht->height);
 	}
 	return;

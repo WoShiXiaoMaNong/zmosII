@@ -1,5 +1,5 @@
 #include "bootpack.h"
-
+#include <stdio.h>
 #define PIT_CTL		0x0043
 #define	PIT_CNT0	0x0040
 
@@ -23,46 +23,54 @@ void init_pit(void)
 	io_out8(PIT_CNT0,0x9c);//中断周期低8位
 	io_out8(PIT_CNT0,0x2e);//中断周期高8位。
 	timerctl.count = 0;
-	timerctl.using = 0;
 	
 	int i;
 	for(i = 0 ; i < MAX_TIMER ; i++){
 		timerctl.timer0[i].flag = TIMER_NOT_USED;
 	}
 	
+	struct TIMER *t = timer_alloc();
+	t->timeout = 0xffffffff;
+	t->flag = TIMER_USED;
+	t->next = NULL;
+	timerctl.head = t;
+	
 	return;
 }
+
+void inthandler20(int *esp)
+{
+	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
+	timerctl.count++;
+	
+	struct TIMER *current = timerctl.head;
+	while(current != NULL){
+		if( current->timeout <= timerctl.count ){
+			fifo32_put(current->fifo,current->data + timerdata0);
+			timerctl.head = current->next;
+			current->next = NULL;
+			current = timerctl.head->next;
+		}else{
+			break;
+		}
+	}
+	return;
+}
+
 /*
 struct TIMER{
+	struct TIMER *next;
 	unsigned int timeout,flag;
 	struct FIFO8 *fifo;
 	unsigned char data;
 };
 
 struct TIMERCTL{
-	unsigned int count,using;
-	struct TIMER timers[MAX_TIMER];
+	unsigned int count;
+	struct TIMER timer0[MAX_TIMER];
+	struct TIMER *head;
 };
 */
-void inthandler20(int *esp)
-{
-	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
-	timerctl.count++;
-	int i;
-	for(i = 0 ; i < timerctl.using ; i++){
-		if( timerctl.timers[i]->timeout <= timerctl.count ){
-			fifo32_put(timerctl.timers[i]->fifo,timerctl.timers[i]->data + timerdata0);
-			timerctl.timers[i] = timerctl.timers[i + 1];
-		}else{
-			break;
-		}
-	}
-	
-	
-	timerctl.using -= i;
-	
-	return;
-}
 
 struct TIMER *timer_alloc(void)
 {
@@ -71,6 +79,7 @@ struct TIMER *timer_alloc(void)
 		if (timerctl.timer0[i].flag == TIMER_NOT_USED){
 			timerctl.timer0[i].flag = TIMER_USED;
 			timerctl.timer0[i].fifo = timerfifo;
+			timerctl.timer0[i].next = NULL;
 			return & (timerctl.timer0[i]);
 		}
 	}
@@ -95,17 +104,31 @@ void settime(struct TIMER *timer,unsigned int timeout, int data)
 	
 	timer->timeout = timeout + timerctl.count;
 	timer->data = data;
-	int i,j;
-	for(i = 0 ; i < timerctl.using ; i++){
-		if( timerctl.timers[i]->timeout >= timer->timeout ){
+	
+
+	struct TIMER *current = timerctl.head;
+	
+	if( timerctl.head->next == NULL || current->timeout >= timer->timeout){
+			timerctl.head = timer;
+			timer->next = current;
+			return;
+	}
+	
+	struct TIMER *next = current->next;
+	
+	while(next != NULL){
+		if(next->timeout >= timer->timeout){
 			break;
 		}
+		current = next;
+		next = next->next;
 	}
-	for(j = timerctl.using ; j >= i ;j--){
-		timerctl.timers[j] = timerctl.timers[j - 1];
-	}
-	timerctl.timers[i] = timer;
-	timerctl.using ++;
+	
+	current->next = timer;
+	timer->next = next;
+	
+	
+	
 	return;
 }
 

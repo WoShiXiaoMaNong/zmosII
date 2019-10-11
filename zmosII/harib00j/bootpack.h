@@ -113,15 +113,16 @@ struct STCTL{
 
 /*timer.c*/
 struct TIMER{
+	struct TIMER *next;
 	unsigned int timeout,flag;
 	struct FIFO32 *fifo;
 	unsigned char data;
 };
 
 struct TIMERCTL{
-	unsigned int count,using;
+	unsigned int count;
 	struct TIMER timer0[MAX_TIMER];
-	struct TIMER *timers[MAX_TIMER];
+	struct TIMER *head;
 };
 
 //nas functions
