@@ -170,7 +170,8 @@ void HariMain(void)
 					
 					if( (mdec.btn & 0x01) != 0){
 						s[13] = 'L';
-						sheet_updown(sheet_mouse,sheet_mouse->height -1);
+						sheet_slide(sheet_windows, mx,my);/*移动图层，并且重新绘制*/
+						//sheet_updown(sheet_mouse,sheet_mouse->height -1);
 					}
 					if( (mdec.btn & 0x02) != 0){
 						s[15] = 'R';
