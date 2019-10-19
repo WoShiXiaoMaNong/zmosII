@@ -5,6 +5,16 @@
 extern struct TIMERCTL timerctl;
 
 
+
+void task_b_main(void)
+{
+	while(1)
+	{
+		io_hlt();
+	}
+}
+
+
 void HariMain(void)
 {
 	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
@@ -93,6 +103,43 @@ void HariMain(void)
 	//putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	putfont8_string_sht(sheet_back,0, 50,COL8_FFFFFF,COL8_008484 , s,20);
 	int data;
+	
+	
+	/* 多任务测试 开始 */
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
+	struct TSS32 tss_a, tss_b;
+	int task_b_esp;
+	tss_a.ldtr = 0;
+	tss_a.iomap = 0x40000000;
+	tss_b.ldtr = 0;
+	tss_b.iomap = 0x40000000;
+	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
+	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
+	load_tr(3 * 8);
+	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	tss_b.eip = (int) &task_b_main;
+	tss_b.eflags = 0x00000202; /* IF = 1; */
+	tss_b.eax = 0;
+	tss_b.ecx = 0;
+	tss_b.edx = 0;
+	tss_b.ebx = 0;
+	tss_b.esp = task_b_esp;
+	tss_b.ebp = 0;
+	tss_b.esi = 0;
+	tss_b.edi = 0;
+	tss_b.es = 1 * 8;
+	tss_b.cs = 2 * 8;
+	tss_b.ss = 1 * 8;
+	tss_b.ds = 1 * 8;
+	tss_b.fs = 1 * 8;
+	tss_b.gs = 1 * 8;
+	
+	/* 多任务测试 结束 */
+	
+	
+	
+	
+	
 	while(1){
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
 		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
@@ -117,6 +164,7 @@ void HariMain(void)
 					}else{
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50,1);
+						taskswitch4();  // 多任务切换测试
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制
@@ -193,4 +241,5 @@ void HariMain(void)
 		}
 	}
 }
+
 

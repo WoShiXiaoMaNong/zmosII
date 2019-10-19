@@ -11,9 +11,9 @@
 
 		GLOBAL	_io_hlt,_io_out8,_io_in8, _io_load_eflags,_io_cli,_io_sti, _io_store_eflags			; c中的函数名，在函数名前加上下下??。
 		GLOBAL  _io_stihlt
-		GLOBAL  _load_gdtr, _load_idtr, _load_cr0, _store_cr0
+		GLOBAL  _load_gdtr, _load_idtr, _load_cr0, _store_cr0, _load_tr
 		GLOBAL  _memtest_sub
-		
+		GLOBAL  _taskswitch4
 		
 		;中断函数
 		GLOBAL _asm_inthandler20,_asm_inthandler21, _asm_inthandler2c
@@ -71,7 +71,10 @@ _store_cr0:
 		mov cr0,eax
 		ret
 
-	
+_load_tr: ;void load_tr(int tr)
+		ltr [ESP + 4]
+		ret
+		
 _load_gdtr: ;void load_gdtr(int limit, int addr);
 	mov ax,[esp + 4]  ;limit
 	mov [esp + 6],ax  ;第一个参数?esp + 4,第二个参数? esp + 8
@@ -167,5 +170,7 @@ _memtest_sub: ; int memtest_sub(unsigned start,unsigned end);
 		pop esi
 		pop edi
 		ret
-
+_taskswitch4:    ;void taskswitch4(void)
+		jmp 4*8:0
+		ret
 		
