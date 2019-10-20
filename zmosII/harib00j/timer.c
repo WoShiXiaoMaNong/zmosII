@@ -6,8 +6,7 @@
 
 struct TIMERCTL timerctl;
 
-struct FIFO32 *timerfifo;
-int timerdata0;
+int timerdata0 = 0;
 
 
 void init_pit(void)
@@ -57,28 +56,13 @@ void inthandler20(int *esp)
 	return;
 }
 
-/*
-struct TIMER{
-	struct TIMER *next;
-	unsigned int timeout,flag;
-	struct FIFO8 *fifo;
-	unsigned char data;
-};
-
-struct TIMERCTL{
-	unsigned int count;
-	struct TIMER timer0[MAX_TIMER];
-	struct TIMER *head;
-};
-*/
-
 struct TIMER *timer_alloc(void)
 {
 	int i;
 	for(i = 0 ; i < MAX_TIMER ; i++){
 		if (timerctl.timer0[i].flag == TIMER_NOT_USED){
 			timerctl.timer0[i].flag = TIMER_USED;
-			timerctl.timer0[i].fifo = timerfifo;
+			timerctl.timer0[i].fifo = NULL;
 			timerctl.timer0[i].next = NULL;
 			return & (timerctl.timer0[i]);
 		}
@@ -90,20 +74,20 @@ void timer_free(struct TIMER *timer)
 	//tbd
 }
 
-void timer_init(struct FIFO32 *fifo,int data0)
+void timer_init(struct TIMER *timer,struct FIFO32 *fifo,int data)
 {
-	timerfifo = fifo;
-	timerdata0 = data0;
+	timer->fifo = fifo;
+	timer->data = data;
 }
 
-void settime(struct TIMER *timer,unsigned int timeout, int data)
+void settime(struct TIMER *timer,unsigned int timeout)
 {
 	if(timer->flag == TIMER_NOT_USED){
 		return;
 	}
 	
 	timer->timeout = timeout + timerctl.count;
-	timer->data = data;
+	
 	
 
 	struct TIMER *current = timerctl.head;

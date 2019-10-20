@@ -152,6 +152,7 @@ void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
 void load_tr(int tr);
+void taskswitch3(void);
 void taskswitch4(void);
 
 //graphic.c
@@ -234,10 +235,12 @@ int fifo32_status(struct FIFO32 *fifo32);
 /*timer.c*/
 void init_pit(void);
 void inthandler20(int *esp);
-void settime(struct TIMER *timer,unsigned int timeout, int data);
+void settime(struct TIMER *timer,unsigned int timeout);
 struct TIMER * timer_alloc(void);
 void timer_free(struct TIMER *timer);
-void timer_init(struct FIFO32 *fifo,int data0);
+void timer_init(struct TIMER *timer,struct FIFO32 *fifo,int data);
+
+
 /*mouse.c*/
 struct MOUSE_DESC{
 	int buf[3],phase;

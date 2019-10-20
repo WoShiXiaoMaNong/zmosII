@@ -13,7 +13,7 @@
 		GLOBAL  _io_stihlt
 		GLOBAL  _load_gdtr, _load_idtr, _load_cr0, _store_cr0, _load_tr
 		GLOBAL  _memtest_sub
-		GLOBAL  _taskswitch4
+		GLOBAL  _taskswitch4, _taskswitch3
 		
 		;’†’f”Ÿ”
 		GLOBAL _asm_inthandler20,_asm_inthandler21, _asm_inthandler2c
@@ -173,4 +173,7 @@ _memtest_sub: ; int memtest_sub(unsigned start,unsigned end);
 _taskswitch4:    ;void taskswitch4(void)
 		jmp 4*8:0
 		ret
+_taskswitch3:    ;void taskswitch3(void)
+		jmp 3*8:0
+		ret		
 		

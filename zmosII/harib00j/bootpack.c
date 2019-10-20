@@ -8,9 +8,23 @@ extern struct TIMERCTL timerctl;
 
 void task_b_main(void)
 {
+	
+	struct FIFO32 buff_fifo;
+	int buff[3];
+	fifo32_init(&buff_fifo,buff,3);
+	struct TIMER *timer = timer_alloc();
+	timer_init(timer,&buff_fifo,5);
+	settime(timer,50);
+	int data;
 	while(1)
 	{
-		io_hlt();
+		data = fifo32_get(&buff_fifo);
+		if(data != 5) {
+			io_hlt();
+		}else{
+			taskswitch3();  // 多任务切换测试
+			settime(timer,50);
+		}
 	}
 }
 
@@ -50,11 +64,13 @@ void HariMain(void)
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
 	/*设置定时器*/
-	timer_init(&buff_fifo,0);
+	//void timer_init(truct TIMER *timer,struct FIFO32 *fifo,int data)
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
-	settime(timer,130,1);
-	settime(timer2,200,2);
+	timer_init(timer,&buff_fifo,1);
+	timer_init(timer2,&buff_fifo,2);
+	settime(timer,130);
+	settime(timer2,200);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -62,11 +78,11 @@ void HariMain(void)
 	struct SHEET *sheet_mouse = sheet_alloc(sheetctl);
 	struct SHEET *sheet_windows = sheet_alloc(sheetctl);
 	unsigned char *back_buf, mouse_buf[256],*windows_buf;
-	back_buf = memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
+	back_buf = (unsigned char*)memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
 	
 	
 	
-	windows_buf = memman_alloc_4k(man, 160 * 80);
+	windows_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
 	create_windows8(windows_buf,160,80,"test window");
 
 	
@@ -160,21 +176,25 @@ void HariMain(void)
 				if(data == 1 || data == 0){
 					if(data == 1){
 					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,9);
-					settime(timer,50,0);
+					settime(timer,50);
+					timer_init(timer,&buff_fifo,0);
 					}else{
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
-						settime(timer,50,1);
+						settime(timer,50);
+						timer_init(timer,&buff_fifo,1);
 						taskswitch4();  // 多任务切换测试
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制
 					if(data == 2){
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-						settime(timer2,50,3);
+						settime(timer2,50);
+						timer_init(timer2,&buff_fifo,3);
 						
 					}else{
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-						settime(timer2,50,2);
+						settime(timer2,50);
+						timer_init(timer2,&buff_fifo,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				}
