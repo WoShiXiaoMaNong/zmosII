@@ -13,7 +13,7 @@
 		GLOBAL  _io_stihlt
 		GLOBAL  _load_gdtr, _load_idtr, _load_cr0, _store_cr0, _load_tr
 		GLOBAL  _memtest_sub
-		GLOBAL  _taskswitch4, _taskswitch3
+		GLOBAL  _farjmp
 		
 		;’†’f”Ÿ”
 		GLOBAL _asm_inthandler20,_asm_inthandler21, _asm_inthandler2c
@@ -169,11 +169,9 @@ _memtest_sub: ; int memtest_sub(unsigned start,unsigned end);
 		pop ebx
 		pop esi
 		pop edi
+		ret	
+		
+_farjmp: 		;void farjmp(int eip, int cs)
+		jmp	far [esp + 4]   ; [esp + 4] -> eip,  [esp + 8] -> cs
 		ret
-_taskswitch4:    ;void taskswitch4(void)
-		jmp 4*8:0
-		ret
-_taskswitch3:    ;void taskswitch3(void)
-		jmp 3*8:0
-		ret		
 		

@@ -22,7 +22,7 @@ void task_b_main(void)
 		if(data != 5) {
 			io_hlt();
 		}else{
-			taskswitch3();  // 多任务切换测试
+			farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
 			settime(timer,50);
 		}
 	}
@@ -182,7 +182,7 @@ void HariMain(void)
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50);
 						timer_init(timer,&buff_fifo,1);
-						taskswitch4();  // 多任务切换测试
+						farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制

@@ -152,9 +152,7 @@ void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
 void load_tr(int tr);
-void taskswitch3(void);
-void taskswitch4(void);
-
+void farjmp(int eip, int cs);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
