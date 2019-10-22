@@ -121,18 +121,19 @@ struct STCTL{
 };
 
 /*timer.c*/
-struct TIMER{
+#define MAX_TIMER		500
+struct TIMER {
 	struct TIMER *next;
-	unsigned int timeout,flag;
+	unsigned int timeout, flags;
 	struct FIFO32 *fifo;
-	unsigned char data;
+	int data;
+};
+struct TIMERCTL {
+	unsigned int count, next;
+	struct TIMER *t0;
+	struct TIMER timers0[MAX_TIMER];
 };
 
-struct TIMERCTL{
-	unsigned int count;
-	struct TIMER timer0[MAX_TIMER];
-	struct TIMER *head;
-};
 
 //nas functions
 void io_hlt(void);
@@ -231,13 +232,13 @@ int fifo32_get(struct FIFO32 *fifo32);
 int fifo32_status(struct FIFO32 *fifo32);
 
 /*timer.c*/
-void init_pit(void);
-void inthandler20(int *esp);
-void settime(struct TIMER *timer,unsigned int timeout);
-struct TIMER * timer_alloc(void);
-void timer_free(struct TIMER *timer);
-void timer_init(struct TIMER *timer,struct FIFO32 *fifo,int data);
 
+void init_pit(void);
+struct TIMER *timer_alloc(void);
+void timer_free(struct TIMER *timer);
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
+void ettime(struct TIMER *timer, unsigned int timeout);
+void inthandler20(int *esp);
 
 /*mouse.c*/
 struct MOUSE_DESC{

@@ -10,20 +10,50 @@ void task_b_main(void)
 {
 	
 	struct FIFO32 buff_fifo;
-	int buff[3];
-	fifo32_init(&buff_fifo,buff,3);
+	int buff[BUF_LENGTH];
+	int buff2[BUF_LENGTH];
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	
 	struct TIMER *timer = timer_alloc();
-	timer_init(timer,&buff_fifo,5);
-	settime(timer,50);
+	struct TIMER *timer_print = timer_alloc();
+	
+	timer_init(timer_print,&buff_fifo,2);
+	timer_init(timer,&buff_fifo,1);
+	
+	settime(timer,4);
+	settime(timer_print,1);
 	int data;
+	int data2;
+	int count = 0;
+	
+	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
+	char s[17];
+	
+
 	while(1)
 	{
-		data = fifo32_get(&buff_fifo);
-		if(data != 5) {
-			io_hlt();
+		io_cli();
+		count ++;
+		if(count <=0 ){
+			count = 0;
+		}
+		if( fifo32_status(&buff_fifo) == 0)  {
+			io_sti();
 		}else{
-			farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
-			settime(timer,50);
+			
+			data = fifo32_get(&buff_fifo);
+			io_sti();
+			
+			
+			if(data == 2){
+				sprintf(s,"Task2 :%11d",count/10000000);
+				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
+				settime(timer_print,2);
+			}
+			if(data == 1){
+				farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
+				settime(timer,4);
+			}
 		}
 	}
 }
@@ -31,6 +61,8 @@ void task_b_main(void)
 
 void HariMain(void)
 {
+	
+	
 	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
 	int cursor_color = COL8_000000;
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
@@ -67,10 +99,15 @@ void HariMain(void)
 	//void timer_init(truct TIMER *timer,struct FIFO32 *fifo,int data)
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
+	
+	struct TIMER *timer_task_switch = timer_alloc();
+	
 	timer_init(timer,&buff_fifo,1);
 	timer_init(timer2,&buff_fifo,2);
+	timer_init(timer_task_switch,&buff_fifo,5);
 	settime(timer,130);
 	settime(timer2,200);
+	settime(timer_task_switch,1);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -122,6 +159,8 @@ void HariMain(void)
 	
 	
 	/* 多任务测试 开始 */
+	
+	*((int *)0x0fec) = (int) sheet_back;
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
 	struct TSS32 tss_a, tss_b;
 	int task_b_esp;
@@ -162,8 +201,8 @@ void HariMain(void)
 		
 		io_cli();
 		if( fifo32_status(&buff_fifo) == 0){
-			io_stihlt();
-			//io_sti();
+			//io_stihlt();
+			io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
 			io_sti();
@@ -182,7 +221,7 @@ void HariMain(void)
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50);
 						timer_init(timer,&buff_fifo,1);
-						farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
+						
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制
@@ -197,6 +236,9 @@ void HariMain(void)
 						timer_init(timer2,&buff_fifo,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				}else if(data == 5){
+					farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
+					settime(timer_task_switch,1);
 				}
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
