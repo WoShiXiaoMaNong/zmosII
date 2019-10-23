@@ -264,4 +264,11 @@ unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size);
 int memman_free_4k(struct MEMMAN *man ,unsigned int addr,unsigned int size);
 unsigned int memtest(unsigned int start, unsigned int end);
 
+
+/* mtast.c */
+extern struct TIMER *mt_timer;
+void mt_init(void);
+void mt_tastswitch(void);
+
+
 #endif

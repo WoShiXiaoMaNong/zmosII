@@ -11,16 +11,13 @@ void task_b_main(void)
 	
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
-	int buff2[BUF_LENGTH];
+
 	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
 	
-	struct TIMER *timer = timer_alloc();
+	
 	struct TIMER *timer_print = timer_alloc();
+	timer_init(timer_print,&buff_fifo,1);
 	
-	timer_init(timer_print,&buff_fifo,2);
-	timer_init(timer,&buff_fifo,1);
-	
-	settime(timer,4);
 	settime(timer_print,1);
 	int data;
 	int data2;
@@ -29,7 +26,8 @@ void task_b_main(void)
 	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
 	char s[17];
 	
-
+		sprintf(s,"Task2 :%11d",count/10000000);
+				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
 	while(1)
 	{
 		io_cli();
@@ -44,15 +42,10 @@ void task_b_main(void)
 			data = fifo32_get(&buff_fifo);
 			io_sti();
 			
-			
-			if(data == 2){
+			if(data == 1){
 				sprintf(s,"Task2 :%11d",count/10000000);
 				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
-				settime(timer_print,2);
-			}
-			if(data == 1){
-				farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
-				settime(timer,4);
+				settime(timer_print,1);
 			}
 		}
 	}
@@ -100,14 +93,14 @@ void HariMain(void)
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
 	
-	struct TIMER *timer_task_switch = timer_alloc();
+
 	
 	timer_init(timer,&buff_fifo,1);
 	timer_init(timer2,&buff_fifo,2);
-	timer_init(timer_task_switch,&buff_fifo,5);
+
 	settime(timer,130);
 	settime(timer2,200);
-	settime(timer_task_switch,1);
+
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -159,7 +152,7 @@ void HariMain(void)
 	
 	
 	/* 多任务测试 开始 */
-	
+
 	*((int *)0x0fec) = (int) sheet_back;
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
 	struct TSS32 tss_a, tss_b;
@@ -188,7 +181,7 @@ void HariMain(void)
 	tss_b.ds = 1 * 8;
 	tss_b.fs = 1 * 8;
 	tss_b.gs = 1 * 8;
-	
+	mt_init();
 	/* 多任务测试 结束 */
 	
 	
@@ -236,9 +229,6 @@ void HariMain(void)
 						timer_init(timer2,&buff_fifo,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-				}else if(data == 5){
-					farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
-					settime(timer_task_switch,1);
 				}
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
