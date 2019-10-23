@@ -1,3 +1,4 @@
+/* タイマ関係 */
 
 #include "bootpack.h"
 
@@ -6,8 +7,8 @@
 
 struct TIMERCTL timerctl;
 
-#define TIMER_FLAGS_ALLOC		1	
-#define TIMER_FLAGS_USING		2
+#define TIMER_FLAGS_ALLOC		1	/* 確保した状態 */
+#define TIMER_FLAGS_USING		2	/* タイマ作動中 */
 
 
 
@@ -97,26 +98,28 @@ void settime(struct TIMER *timer, unsigned int timeout)
 
 void inthandler20(int *esp)
 {
-	struct TIMER *timer;
+	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
 	
-	io_out8(PIC0_OCW2, 0x60);	//通知 主PIC IRQ-0 中断处理完毕。
+	
 	timerctl.count++;
 	if (timerctl.next > timerctl.count) {
 		return;
 	}
-	timer = timerctl.t0; 
-	for (;;) {
-		if (timer->timeout > timerctl.count) {
+	
+	
+	struct TIMER *timer = timerctl.t0;
+	while(timer != 0){
+		timerctl.t0 = timer;
+		timerctl.next = timer->timeout;
+		if( timer->timeout <= timerctl.count ){
+			timer->flags = TIMER_FLAGS_ALLOC;
+			fifo32_put(timer->fifo,timer->data );
+			timer = timerctl.t0->next;
+		}else{
 			break;
 		}
-		timer->flags = TIMER_FLAGS_ALLOC;
-		
-		fifo32_put(timer->fifo, timer->data);
-		
-		timer = timer->next; 
 	}
-	timerctl.t0 = timer;
-	timerctl.next = timer->timeout;
 	
 	return;
 }
+
