@@ -26,8 +26,8 @@ void task_b_main(void)
 	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
 	char s[17];
 	
-		sprintf(s,"Task2 :%11d",count/10000000);
-				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
+	sprintf(s,"Task2 :%11d",count/10000000);
+	putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
 	while(1)
 	{
 		io_cli();
@@ -152,36 +152,24 @@ void HariMain(void)
 	
 	
 	/* 多任务测试 开始 */
-
+	mt_init(man);
 	*((int *)0x0fec) = (int) sheet_back;
-	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
-	struct TSS32 tss_a, tss_b;
+	
+	struct TASK *task = task_alloc();
 	int task_b_esp;
-	tss_a.ldtr = 0;
-	tss_a.iomap = 0x40000000;
-	tss_b.ldtr = 0;
-	tss_b.iomap = 0x40000000;
-	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
-	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
-	load_tr(3 * 8);
+	
 	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
-	tss_b.eip = (int) &task_b_main;
-	tss_b.eflags = 0x00000202; /* IF = 1; */
-	tss_b.eax = 0;
-	tss_b.ecx = 0;
-	tss_b.edx = 0;
-	tss_b.ebx = 0;
-	tss_b.esp = task_b_esp;
-	tss_b.ebp = 0;
-	tss_b.esi = 0;
-	tss_b.edi = 0;
-	tss_b.es = 1 * 8;
-	tss_b.cs = 2 * 8;
-	tss_b.ss = 1 * 8;
-	tss_b.ds = 1 * 8;
-	tss_b.fs = 1 * 8;
-	tss_b.gs = 1 * 8;
-	mt_init();
+	task->tss.eip = (int) &task_b_main;
+	task->tss.eflags = 0x00000202; /* IF = 1; */
+	task->tss.esp = task_b_esp;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	task->priority = 2;
+	task_run(task);
 	/* 多任务测试 结束 */
 	
 	
