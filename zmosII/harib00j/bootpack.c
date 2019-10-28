@@ -4,6 +4,49 @@
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 
+void task_c_main(void)
+{
+	
+	struct FIFO32 buff_fifo;
+	int buff[BUF_LENGTH];
+
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	
+	
+	struct TIMER *timer_print = timer_alloc();
+	timer_init(timer_print,&buff_fifo,1);
+	
+	settime(timer_print,1);
+	int data;
+	int data2;
+	int count = 0;
+	
+	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
+	char s[17];
+	
+
+	while(1)
+	{
+		io_cli();
+		count ++;
+		if(count <=0 ){
+			count = 0;
+		}
+		if( fifo32_status(&buff_fifo) == 0)  {
+			io_sti();
+		}else{
+			
+			data = fifo32_get(&buff_fifo);
+			io_sti();
+			
+			if(data == 1){
+				sprintf(s,"Tssk3 :%11d",count/1000000);
+				putfont8_string_sht(sheet_back,150, 380,COL8_000000,COL8_FFFFFF , s,18);
+				settime(timer_print,1);
+			}
+		}
+	}
+}
 
 
 void task_b_main(void)
@@ -25,9 +68,7 @@ void task_b_main(void)
 	
 	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
 	char s[17];
-	
-	sprintf(s,"Task2 :%11d",count/10000000);
-	putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
+
 	while(1)
 	{
 		io_cli();
@@ -43,8 +84,8 @@ void task_b_main(void)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Task2 :%11d",count/10000000);
-				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
+				sprintf(s,"Tssk2 :%11d",count/10000000);
+				putfont8_string_sht(sheet_back,150, 480,COL8_000000,COL8_FFFFFF , s,18);
 				settime(timer_print,1);
 			}
 		}
@@ -170,6 +211,25 @@ void HariMain(void)
 	task->tss.gs = 1 * 8;
 	task->priority = 2;
 	task_run(task);
+	
+	
+	task = task_alloc();
+	int task_c_esp;
+	
+	task_c_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	task->tss.eip = (int) &task_c_main;
+	task->tss.eflags = 0x00000202; /* IF = 1; */
+	task->tss.esp = task_c_esp;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	task->priority = 2;
+	task_run(task);
+	
+
 	/* 多任务测试 结束 */
 	
 	

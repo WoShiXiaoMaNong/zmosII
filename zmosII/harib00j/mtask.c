@@ -18,7 +18,7 @@ struct TIMER *mt_timer;
 
 struct TASK_CTL *taskctl;
 
-
+ int ss = 3;
 void mt_init(struct MEMMAN *man )
 {
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
@@ -35,7 +35,7 @@ void mt_init(struct MEMMAN *man )
 		
 	}
 	taskctl->taskcount = 0;
-	taskctl->now = 0;
+	taskctl->now = 1;
 	task = task_alloc();
 	task->priority = 2;
 	task_run(task);
@@ -96,30 +96,14 @@ void mt_tastswitch(void)
 {
 	int i;
 	struct TASK *nextTask = taskctl->tasks[taskctl->now];
-	
-	
-	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
-	char s[50];
-	
-	sprintf(s,"now:%3d, count%3d,gdt%2d,p%2d,status:%2d,tss%19d@",taskctl->now , taskctl->taskcount,nextTask->segment,nextTask->priority,nextTask->status,nextTask->tss.es);
-	putfont8_string_sht(sheet_back,100, 200,COL8_000000,COL8_FFFFFF , s,61);
-	
-	
-		sprintf(s,"now:%10x",nextTask->tss.eip);
-		putfont8_string_sht(sheet_back,300, 250,COL8_000000,COL8_FFFFFF , s,14);
-	
-	
-	
-	settime(mt_timer, 2);
-	//farjmp(0,nextTask->segment);
-
-	
 	taskctl->now ++;
 	
 	if(taskctl->now >= taskctl->taskcount){
 		taskctl->now = 0;
 	}
 
+	settime(mt_timer, 2);
+	farjmp(0,nextTask->segment);
 
 	return;
 }

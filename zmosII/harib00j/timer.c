@@ -78,6 +78,7 @@ void settime(struct TIMER *timer, unsigned int timeout)
 		timer->next = t;
 		timerctl.next = timer->timeout;
 		io_store_eflags(e);
+		io_sti();
 		return;
 	}
 	
@@ -89,6 +90,7 @@ void settime(struct TIMER *timer, unsigned int timeout)
 			s->next = timer;
 			timer->next = t; 
 			io_store_eflags(e);
+			io_sti();
 			return;
 		}
 	}
