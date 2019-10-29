@@ -75,13 +75,6 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
-struct TSS32{
-	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
-	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
-	int es, cs, ss, ds, fs, gs;
-	int ldtr,iomap;
-	
-};
 
 
 /*fifo.c*/
@@ -121,7 +114,6 @@ struct STCTL{
 };
 
 /*timer.c*/
-#define MAX_TIMER		500
 struct TIMER {
 	struct TIMER *next;
 	unsigned int timeout, flags;
@@ -263,5 +255,42 @@ int memman_free(struct MEMMAN *man ,unsigned int addr,unsigned int size);
 unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size);
 int memman_free_4k(struct MEMMAN *man ,unsigned int addr,unsigned int size);
 unsigned int memtest(unsigned int start, unsigned int end);
+
+
+/* mtast.c */
+#define MAX_TASK	50
+#define TASK_GDT0   3
+#define TASK_STATUS_RUNNING		1
+#define TASK_STATUS_STOPED		0
+#define TASK_STATUS_FREE		2
+#define TASK_STATUS_ALLOCATED		3
+struct TSS32{
+	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
+	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
+	int es, cs, ss, ds, fs, gs;
+	int ldtr,iomap;
+	
+};
+
+struct TASK{
+	struct TSS32 tss;
+	int segment;
+	int status;
+	int priority;
+};
+struct TASK_CTL{
+	struct TASK task0[MAX_TASK];
+	struct TASK *tasks[MAX_TASK];
+	int now;
+	int taskcount;
+};
+
+
+extern struct TIMER *mt_timer;
+void mt_init(struct MEMMAN *man );
+void mt_tastswitch(void);
+struct TASK* task_alloc(void);
+void task_run(struct TASK* task);
+
 
 #endif

@@ -4,23 +4,18 @@
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 
-
-
-void task_b_main(void)
+void task_c_main(void)
 {
 	
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
-	int buff2[BUF_LENGTH];
+
 	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
 	
-	struct TIMER *timer = timer_alloc();
+	
 	struct TIMER *timer_print = timer_alloc();
+	timer_init(timer_print,&buff_fifo,1);
 	
-	timer_init(timer_print,&buff_fifo,2);
-	timer_init(timer,&buff_fifo,1);
-	
-	settime(timer,4);
 	settime(timer_print,1);
 	int data;
 	int data2;
@@ -44,15 +39,54 @@ void task_b_main(void)
 			data = fifo32_get(&buff_fifo);
 			io_sti();
 			
-			
-			if(data == 2){
-				sprintf(s,"Task2 :%11d",count/10000000);
-				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
-				settime(timer_print,2);
-			}
 			if(data == 1){
-				farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
-				settime(timer,4);
+				sprintf(s,"Tssk3 :%11d",count/1000000);
+				putfont8_string_sht(sheet_back,150, 380,COL8_000000,COL8_FFFFFF , s,18);
+				settime(timer_print,1);
+			}
+		}
+	}
+}
+
+
+void task_b_main(void)
+{
+	
+	struct FIFO32 buff_fifo;
+	int buff[BUF_LENGTH];
+
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	
+	
+	struct TIMER *timer_print = timer_alloc();
+	timer_init(timer_print,&buff_fifo,1);
+	
+	settime(timer_print,1);
+	int data;
+	int data2;
+	int count = 0;
+	
+	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
+	char s[17];
+
+	while(1)
+	{
+		io_cli();
+		count ++;
+		if(count <=0 ){
+			count = 0;
+		}
+		if( fifo32_status(&buff_fifo) == 0)  {
+			io_sti();
+		}else{
+			
+			data = fifo32_get(&buff_fifo);
+			io_sti();
+			
+			if(data == 1){
+				sprintf(s,"Tssk2 :%11d",count/10000000);
+				putfont8_string_sht(sheet_back,150, 480,COL8_000000,COL8_FFFFFF , s,18);
+				settime(timer_print,1);
 			}
 		}
 	}
@@ -100,14 +134,14 @@ void HariMain(void)
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
 	
-	struct TIMER *timer_task_switch = timer_alloc();
+
 	
 	timer_init(timer,&buff_fifo,1);
 	timer_init(timer2,&buff_fifo,2);
-	timer_init(timer_task_switch,&buff_fifo,5);
+
 	settime(timer,130);
 	settime(timer2,200);
-	settime(timer_task_switch,1);
+
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -159,36 +193,43 @@ void HariMain(void)
 	
 	
 	/* 多任务测试 开始 */
-	
+	mt_init(man);
 	*((int *)0x0fec) = (int) sheet_back;
-	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
-	struct TSS32 tss_a, tss_b;
-	int task_b_esp;
-	tss_a.ldtr = 0;
-	tss_a.iomap = 0x40000000;
-	tss_b.ldtr = 0;
-	tss_b.iomap = 0x40000000;
-	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
-	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
-	load_tr(3 * 8);
-	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
-	tss_b.eip = (int) &task_b_main;
-	tss_b.eflags = 0x00000202; /* IF = 1; */
-	tss_b.eax = 0;
-	tss_b.ecx = 0;
-	tss_b.edx = 0;
-	tss_b.ebx = 0;
-	tss_b.esp = task_b_esp;
-	tss_b.ebp = 0;
-	tss_b.esi = 0;
-	tss_b.edi = 0;
-	tss_b.es = 1 * 8;
-	tss_b.cs = 2 * 8;
-	tss_b.ss = 1 * 8;
-	tss_b.ds = 1 * 8;
-	tss_b.fs = 1 * 8;
-	tss_b.gs = 1 * 8;
 	
+	struct TASK *task = task_alloc();
+	int task_b_esp;
+	
+	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	task->tss.eip = (int) &task_b_main;
+	task->tss.eflags = 0x00000202; /* IF = 1; */
+	task->tss.esp = task_b_esp;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	task->priority = 2;
+	task_run(task);
+	
+	
+	task = task_alloc();
+	int task_c_esp;
+	
+	task_c_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	task->tss.eip = (int) &task_c_main;
+	task->tss.eflags = 0x00000202; /* IF = 1; */
+	task->tss.esp = task_c_esp;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	task->priority = 2;
+	task_run(task);
+	
+
 	/* 多任务测试 结束 */
 	
 	
@@ -236,9 +277,6 @@ void HariMain(void)
 						timer_init(timer2,&buff_fifo,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-				}else if(data == 5){
-					farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
-					settime(timer_task_switch,1);
 				}
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
