@@ -1,13 +1,15 @@
-#include "bootpack.h"
-#include <stdio.h>
-#define PIT_CTL		0x0043
-#define	PIT_CNT0	0x0040
+/* タイマ関係 */
 
+#include "bootpack.h"
+
+#define PIT_CTRL	0x0043
+#define PIT_CNT0	0x0040
 
 struct TIMERCTL timerctl;
 
-struct FIFO32 *timerfifo;
-int timerdata0;
+#define TIMER_FLAGS_ALLOC		1	/* 確保した状態 */
+#define TIMER_FLAGS_USING		2	/* タイマ作動中 */
+
 
 
 void init_pit(void)
@@ -19,120 +21,105 @@ void init_pit(void)
 	 * 主频为1.19318KHz
 	 * 大约每秒100次中断。
 	*/
-	io_out8(PIT_CTL,0x34);
+	io_out8(PIT_CTRL,0x34);
 	io_out8(PIT_CNT0,0x9c);//中断周期低8位
 	io_out8(PIT_CNT0,0x2e);//中断周期高8位。
 	timerctl.count = 0;
 	
 	int i;
 	for(i = 0 ; i < MAX_TIMER ; i++){
-		timerctl.timer0[i].flag = TIMER_NOT_USED;
+		timerctl.timers0[i].flags = 0;
 	}
 	
 	struct TIMER *t = timer_alloc();
 	t->timeout = 0xffffffff;
-	t->flag = TIMER_USED;
-	t->next = NULL;
-	timerctl.head = t;
+	t->flags = TIMER_FLAGS_USING;
+	t->next = 0;
+	timerctl.t0 = t;
 	
 	return;
+}
+
+struct TIMER *timer_alloc(void)
+{
+	int i;
+	for (i = 0; i < MAX_TIMER; i++) {
+		if (timerctl.timers0[i].flags == 0) {
+			timerctl.timers0[i].flags = TIMER_FLAGS_ALLOC;
+			return &timerctl.timers0[i];
+		}
+	}
+	return 0; 
+}
+
+void timer_free(struct TIMER *timer)
+{
+	timer->flags = 0; 
+	return;
+}
+
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data)
+{
+	timer->fifo = fifo;
+	timer->data = data;
+	return;
+}
+
+void settime(struct TIMER *timer, unsigned int timeout)
+{
+	int e;
+	struct TIMER *t, *s;
+	timer->timeout = timeout + timerctl.count;
+	timer->flags = TIMER_FLAGS_USING;
+	e = io_load_eflags();
+	io_cli();
+	t = timerctl.t0;
+	if (timer->timeout <= t->timeout) {
+	
+		timerctl.t0 = timer;
+		timer->next = t;
+		timerctl.next = timer->timeout;
+		io_store_eflags(e);
+		return;
+	}
+	
+	for (;;) {
+		s = t;
+		t = t->next;
+		if (timer->timeout <= t->timeout) {
+		
+			s->next = timer;
+			timer->next = t; 
+			io_store_eflags(e);
+			return;
+		}
+	}
 }
 
 void inthandler20(int *esp)
 {
 	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
-	timerctl.count++;
 	
-	struct TIMER *current = timerctl.head;
-	while(current != NULL){
-		if( current->timeout <= timerctl.count ){
-			fifo32_put(current->fifo,current->data + timerdata0);
-			timerctl.head = current->next;
-			current->next = NULL;
-			current = timerctl.head->next;
+	
+	timerctl.count++;
+	if (timerctl.next > timerctl.count) {
+		return;
+	}
+	
+	
+	struct TIMER *timer = timerctl.t0;
+	while(timer != 0){
+		timerctl.t0 = timer;
+		timerctl.next = timer->timeout;
+		if( timer->timeout <= timerctl.count ){
+			timer->flags = TIMER_FLAGS_ALLOC;
+			fifo32_put(timer->fifo,timer->data );
+			timer = timerctl.t0->next;
 		}else{
 			break;
 		}
 	}
-	return;
-}
-
-/*
-struct TIMER{
-	struct TIMER *next;
-	unsigned int timeout,flag;
-	struct FIFO8 *fifo;
-	unsigned char data;
-};
-
-struct TIMERCTL{
-	unsigned int count;
-	struct TIMER timer0[MAX_TIMER];
-	struct TIMER *head;
-};
-*/
-
-struct TIMER *timer_alloc(void)
-{
-	int i;
-	for(i = 0 ; i < MAX_TIMER ; i++){
-		if (timerctl.timer0[i].flag == TIMER_NOT_USED){
-			timerctl.timer0[i].flag = TIMER_USED;
-			timerctl.timer0[i].fifo = timerfifo;
-			timerctl.timer0[i].next = NULL;
-			return & (timerctl.timer0[i]);
-		}
-	}
-	return 0;
-}
-void timer_free(struct TIMER *timer)
-{
-	//tbd
-}
-
-void timer_init(struct FIFO32 *fifo,int data0)
-{
-	timerfifo = fifo;
-	timerdata0 = data0;
-}
-
-void settime(struct TIMER *timer,unsigned int timeout, int data)
-{
-	if(timer->flag == TIMER_NOT_USED){
-		return;
-	}
-	
-	timer->timeout = timeout + timerctl.count;
-	timer->data = data;
-	
-
-	struct TIMER *current = timerctl.head;
-	
-	if( timerctl.head->next == NULL || current->timeout >= timer->timeout){
-			timerctl.head = timer;
-			timer->next = current;
-			return;
-	}
-	
-	struct TIMER *next = current->next;
-	
-	while(next != NULL){
-		if(next->timeout >= timer->timeout){
-			break;
-		}
-		current = next;
-		next = next->next;
-	}
-	
-	current->next = timer;
-	timer->next = next;
-	
-	
 	
 	return;
 }
-
-
-
-
 

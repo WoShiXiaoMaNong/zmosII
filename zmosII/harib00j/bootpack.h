@@ -75,6 +75,15 @@ struct GATE_DESCRIPTOR{
 	short offset_high;
 };
 
+struct TSS32{
+	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
+	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
+	int es, cs, ss, ds, fs, gs;
+	int ldtr,iomap;
+	
+};
+
+
 /*fifo.c*/
 struct FIFO8{
 	char *buf;
@@ -112,18 +121,19 @@ struct STCTL{
 };
 
 /*timer.c*/
-struct TIMER{
+#define MAX_TIMER		500
+struct TIMER {
 	struct TIMER *next;
-	unsigned int timeout,flag;
+	unsigned int timeout, flags;
 	struct FIFO32 *fifo;
-	unsigned char data;
+	int data;
+};
+struct TIMERCTL {
+	unsigned int count, next;
+	struct TIMER *t0;
+	struct TIMER timers0[MAX_TIMER];
 };
 
-struct TIMERCTL{
-	unsigned int count;
-	struct TIMER timer0[MAX_TIMER];
-	struct TIMER *head;
-};
 
 //nas functions
 void io_hlt(void);
@@ -142,9 +152,8 @@ void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
-
-
-
+void load_tr(int tr);
+void farjmp(int eip, int cs);
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -163,6 +172,7 @@ void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char co
 void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
 void create_windows8(unsigned char *buf,int xsize,int ysize,char *title);
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 /*sheet.c*/
 struct STCTL *shtctl_init(struct MEMMAN *man, char *vram, int xsize, int ysize);
@@ -187,7 +197,7 @@ void set_gatedesc(struct GATE_DESCRIPTOR *idt,int offset, int selector,int acces
 #define AR_DATA32_RW	0x4092
 #define AR_CODE32_ER	0x409a
 #define AR_INTGATE32	0x008e
-
+#define AR_TSS32		0x0089
 
 /* int.c */
 void init_pic(void);
@@ -222,12 +232,14 @@ int fifo32_get(struct FIFO32 *fifo32);
 int fifo32_status(struct FIFO32 *fifo32);
 
 /*timer.c*/
+
 void init_pit(void);
-void inthandler20(int *esp);
-void settime(struct TIMER *timer,unsigned int timeout, int data);
-struct TIMER * timer_alloc(void);
+struct TIMER *timer_alloc(void);
 void timer_free(struct TIMER *timer);
-void timer_init(struct FIFO32 *fifo,int data0);
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
+void ettime(struct TIMER *timer, unsigned int timeout);
+void inthandler20(int *esp);
+
 /*mouse.c*/
 struct MOUSE_DESC{
 	int buf[3],phase;

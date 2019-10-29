@@ -5,9 +5,66 @@
 extern struct TIMERCTL timerctl;
 
 
+
+void task_b_main(void)
+{
+	
+	struct FIFO32 buff_fifo;
+	int buff[BUF_LENGTH];
+	int buff2[BUF_LENGTH];
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	
+	struct TIMER *timer = timer_alloc();
+	struct TIMER *timer_print = timer_alloc();
+	
+	timer_init(timer_print,&buff_fifo,2);
+	timer_init(timer,&buff_fifo,1);
+	
+	settime(timer,4);
+	settime(timer_print,1);
+	int data;
+	int data2;
+	int count = 0;
+	
+	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
+	char s[17];
+	
+
+	while(1)
+	{
+		io_cli();
+		count ++;
+		if(count <=0 ){
+			count = 0;
+		}
+		if( fifo32_status(&buff_fifo) == 0)  {
+			io_sti();
+		}else{
+			
+			data = fifo32_get(&buff_fifo);
+			io_sti();
+			
+			
+			if(data == 2){
+				sprintf(s,"Task2 :%11d",count/10000000);
+				putfont8_string_sht(sheet_back,200, 200,COL8_000000,COL8_FFFFFF , s,18);
+				settime(timer_print,2);
+			}
+			if(data == 1){
+				farjmp(0,3 << 3 );  // 跳转到3号GDT ,多任务切换测试;  // 多任务切换测试
+				settime(timer,4);
+			}
+		}
+	}
+}
+
+
 void HariMain(void)
 {
-	int countForTest;
+	
+	
+	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
+	int cursor_color = COL8_000000;
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADDR_BOOTINFO;
 	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	struct MOUSE_DESC mdec;
@@ -39,11 +96,18 @@ void HariMain(void)
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
 	/*设置定时器*/
-	timer_init(&buff_fifo,0);
+	//void timer_init(truct TIMER *timer,struct FIFO32 *fifo,int data)
 	struct TIMER *timer = timer_alloc();
 	struct TIMER *timer2 = timer_alloc();
-	settime(timer,130,1);
-	settime(timer2,200,2);
+	
+	struct TIMER *timer_task_switch = timer_alloc();
+	
+	timer_init(timer,&buff_fifo,1);
+	timer_init(timer2,&buff_fifo,2);
+	timer_init(timer_task_switch,&buff_fifo,5);
+	settime(timer,130);
+	settime(timer2,200);
+	settime(timer_task_switch,1);
 	
 	/*初始化图层管理器，以及背景图层和鼠标图层*/
 	struct STCTL *sheetctl = shtctl_init(man, binfo->vram, binfo->scrnx, binfo->scrny);	
@@ -51,15 +115,23 @@ void HariMain(void)
 	struct SHEET *sheet_mouse = sheet_alloc(sheetctl);
 	struct SHEET *sheet_windows = sheet_alloc(sheetctl);
 	unsigned char *back_buf, mouse_buf[256],*windows_buf;
-	back_buf = memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
-	windows_buf = memman_alloc_4k(man, 160 * 80);
+	back_buf = (unsigned char*)memman_alloc_4k(man, binfo->scrnx * binfo->scrny);
+	
+	
+	
+	windows_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
 	create_windows8(windows_buf,160,80,"test window");
+
+	
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
 	sheet_setbuf(sheet_mouse, mouse_buf, 16,16, 99);/*设置透明色号为99*/
 	sheet_setbuf(sheet_windows,windows_buf,160,80,-1);
 	sheet_updown(sheet_back,0);
 	sheet_updown(sheet_windows,1);
 	sheet_updown(sheet_mouse,2);
+
+	/*Text input in Test window*/
+	make_textbox8(sheet_windows, 8,48,144,16,COL8_FFFFFF);
 
 	sheet_slide(sheet_windows, 80,70);
 
@@ -84,14 +156,53 @@ void HariMain(void)
 	//putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	putfont8_string_sht(sheet_back,0, 50,COL8_FFFFFF,COL8_008484 , s,20);
 	int data;
+	
+	
+	/* 多任务测试 开始 */
+	
+	*((int *)0x0fec) = (int) sheet_back;
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
+	struct TSS32 tss_a, tss_b;
+	int task_b_esp;
+	tss_a.ldtr = 0;
+	tss_a.iomap = 0x40000000;
+	tss_b.ldtr = 0;
+	tss_b.iomap = 0x40000000;
+	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
+	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
+	load_tr(3 * 8);
+	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	tss_b.eip = (int) &task_b_main;
+	tss_b.eflags = 0x00000202; /* IF = 1; */
+	tss_b.eax = 0;
+	tss_b.ecx = 0;
+	tss_b.edx = 0;
+	tss_b.ebx = 0;
+	tss_b.esp = task_b_esp;
+	tss_b.ebp = 0;
+	tss_b.esi = 0;
+	tss_b.edi = 0;
+	tss_b.es = 1 * 8;
+	tss_b.cs = 2 * 8;
+	tss_b.ss = 1 * 8;
+	tss_b.ds = 1 * 8;
+	tss_b.fs = 1 * 8;
+	tss_b.gs = 1 * 8;
+	
+	/* 多任务测试 结束 */
+	
+	
+	
+	
+	
 	while(1){
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
 		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
 		
 		io_cli();
 		if( fifo32_status(&buff_fifo) == 0){
-			io_stihlt();
-			//io_sti();
+			//io_stihlt();
+			io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
 			io_sti();
@@ -104,37 +215,61 @@ void HariMain(void)
 				if(data == 1 || data == 0){
 					if(data == 1){
 					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,9);
-					settime(timer,50,0);
+					settime(timer,50);
+					timer_init(timer,&buff_fifo,0);
 					}else{
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
-						settime(timer,50,1);
+						settime(timer,50);
+						timer_init(timer,&buff_fifo,1);
+						
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制
 					if(data == 2){
-						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,20,48,20,64);
-						settime(timer2,50,3);
+						boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+						settime(timer2,50);
+						timer_init(timer2,&buff_fifo,3);
 						
 					}else{
-						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_C6C6C6,20,48,20,64);
-						settime(timer2,50,2);
+						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+						settime(timer2,50);
+						timer_init(timer2,&buff_fifo,2);
 					};
-					sheet_refresh(sheet_windows, 20,48,20,64);
+					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				}else if(data == 5){
+					farjmp(0,4 << 3 );  // 跳转到4号GDT ,多任务切换测试
+					settime(timer_task_switch,1);
 				}
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
+				static char keytable[0x54] = {
+					0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
+					'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
+					'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+					'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+					0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+					'2', '3', '0', '.'};
+			
 				data = data - 256;
 				sprintf(s,"%02X",data);
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
 				
 				
 				//字符输入测试 >>>>开始<<<<
-				if( data  == 0x1e){
-					putfont8_string_sht(sheet_windows,20, 48,COL8_000000,COL8_C6C6C6 , "A",1);
+				if(data < 0x54){
+					if(keytable[data] != 0){
+						s[0] = keytable[data];
+						s[1] = 0;
+						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , s,1);
+						cursor_x += 8;
+					}
+					if(data == 0x0e){
+						cursor_x -= 8;
+						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , " ",1);
+					}
 				}
-				if( data  == 0x30){
-					putfont8_string_sht(sheet_windows,20, 48,COL8_000000,COL8_C6C6C6 , "B",1);
-				}
+				boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				//字符输入测试 >>>>结束<<<<
 				
 			}else if(data >= 512 && data <768 ){/* 鼠标输入*/
@@ -145,7 +280,8 @@ void HariMain(void)
 					
 					if( (mdec.btn & 0x01) != 0){
 						s[13] = 'L';
-						sheet_updown(sheet_mouse,sheet_mouse->height -1);
+						sheet_slide(sheet_windows, mx,my);/*移动图层，并且重新绘制*/
+						//sheet_updown(sheet_mouse,sheet_mouse->height -1);
 					}
 					if( (mdec.btn & 0x02) != 0){
 						s[15] = 'R';
@@ -167,4 +303,5 @@ void HariMain(void)
 		}
 	}
 }
+
 

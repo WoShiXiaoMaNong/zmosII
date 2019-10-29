@@ -13,7 +13,7 @@ void fifo8_init(struct FIFO8 *fifo8,char *buf, int size)
 
 int fifo8_put(struct FIFO8 *fifo8,char data)
 {
-	if(fifo8->free == 0){
+	if(fifo8->free <= 0){
 		fifo8->flags = -1;
 		return -1;
 	}
@@ -30,7 +30,7 @@ int fifo8_put(struct FIFO8 *fifo8,char data)
 
 char fifo8_get(struct FIFO8 *fifo8)
 {
-	if(fifo8->free == fifo8->size){
+	if(fifo8->free >= fifo8->size){
 		return -1;
 	}
 	char data = fifo8->buf[fifo8->q];

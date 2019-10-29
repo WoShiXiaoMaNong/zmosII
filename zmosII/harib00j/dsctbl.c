@@ -24,7 +24,7 @@ void init_gdtidt(void)
 		set_gatedesc(idt + i,0,0,0);
 	}
 	
-	/*设置20号中断，键盘中断 */
+	/*设置20号中断，定时器中断 */
 	set_gatedesc(idt + 0x20,(int)asm_inthandler20,2 * 8,AR_INTGATE32);
 	
 	/*设置21号中断，键盘中断 */
