@@ -1,24 +1,9 @@
 #include "bootpack.h"
 
 
-
-
-
-/*
-	init();
-	taskalloc()
-	task esp
-	task eip
-	taskrun(task);
-
-*/
-
-
 struct TIMER *mt_timer;
-
 struct TASK_CTL *taskctl;
 
- int ss = 3;
 void mt_init(struct MEMMAN *man )
 {
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
@@ -104,7 +89,6 @@ void mt_tastswitch(void)
 
 	settime(mt_timer, 2);
 	farjmp(0,nextTask->segment);
-
 	return;
 }
 

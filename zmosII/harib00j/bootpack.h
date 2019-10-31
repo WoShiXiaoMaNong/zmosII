@@ -258,12 +258,12 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 
 /* mtast.c */
-#define MAX_TASK	50
+#define MAX_TASK	256
 #define TASK_GDT0   3
 #define TASK_STATUS_RUNNING		1
 #define TASK_STATUS_STOPED		0
 #define TASK_STATUS_FREE		2
-#define TASK_STATUS_ALLOCATED		3
+#define TASK_STATUS_ALLOCATED	3
 struct TSS32{
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;

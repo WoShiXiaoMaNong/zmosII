@@ -4,7 +4,7 @@
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 
-void task_c_main(void)
+void task_c_main(struct SHEET* sheet)
 {
 	
 	struct FIFO32 buff_fifo;
@@ -21,7 +21,6 @@ void task_c_main(void)
 	int data2;
 	int count = 0;
 	
-	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
 	char s[17];
 	
 
@@ -41,7 +40,7 @@ void task_c_main(void)
 			
 			if(data == 1){
 				sprintf(s,"Tssk3 :%11d",count/1000000);
-				putfont8_string_sht(sheet_back,150, 380,COL8_000000,COL8_FFFFFF , s,18);
+				putfont8_string_sht(sheet,150, 380,COL8_000000,COL8_FFFFFF , s,18);
 				settime(timer_print,1);
 			}
 		}
@@ -227,8 +226,12 @@ void HariMain(void)
 	task->tss.fs = 1 * 8;
 	task->tss.gs = 1 * 8;
 	task->priority = 2;
+	
+		*((int *)(task->tss.esp + 4)) = (int) sheet_back;
 	task_run(task);
 	
+	
+
 
 	/* 多任务测试 结束 */
 	
