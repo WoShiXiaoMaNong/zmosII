@@ -48,6 +48,39 @@
 #define TIMER_NOT_USED	0
 
 
+/* mtast.c */
+#define MAX_TASK	256
+#define TASK_GDT0   3
+#define TASK_STATUS_RUNNING		1
+#define TASK_STATUS_STOPED		0
+#define TASK_STATUS_FREE		2
+#define TASK_STATUS_ALLOCATED	3
+#define TASK_STATUS_SLEEP		4
+
+struct TSS32{
+	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
+	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
+	int es, cs, ss, ds, fs, gs;
+	int ldtr,iomap;
+	
+};
+
+struct TASK{
+	struct TSS32 tss;
+	int segment;
+	int status;
+	int priority;
+};
+struct TASK_CTL{
+	struct TASK task0[MAX_TASK];
+	struct TASK *tasks[MAX_TASK];
+	int now;
+	int taskcount;
+};
+
+
+
+
 #define ADDR_BOOTINFO 0x0ff0
 /*; BOOT_INFO
 CYLS	EQU		0x0ff0			; 启动扇区
@@ -86,6 +119,7 @@ struct FIFO8{
 struct FIFO32{
 	int *buf;
 	int p,q,size,free,flags;	
+	struct TASK* task;
 };
 /*memory.c*/
 struct FREEINFO{
@@ -218,7 +252,7 @@ int fifo8_put(struct FIFO8 *fifo8, char data);
 char fifo8_get(struct FIFO8 *fifo8);
 int fifo8_status(struct FIFO8 *fifo8);
 
-void fifo32_init(struct FIFO32 *fifo32,int *buf, int size);
+void fifo32_init(struct FIFO32 *fifo32,int *buf, int size,struct TASK* task);
 int fifo32_put(struct FIFO32 *fifo32,int data);
 int fifo32_get(struct FIFO32 *fifo32);
 int fifo32_status(struct FIFO32 *fifo32);
@@ -257,33 +291,6 @@ int memman_free_4k(struct MEMMAN *man ,unsigned int addr,unsigned int size);
 unsigned int memtest(unsigned int start, unsigned int end);
 
 
-/* mtast.c */
-#define MAX_TASK	256
-#define TASK_GDT0   3
-#define TASK_STATUS_RUNNING		1
-#define TASK_STATUS_STOPED		0
-#define TASK_STATUS_FREE		2
-#define TASK_STATUS_ALLOCATED	3
-struct TSS32{
-	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
-	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
-	int es, cs, ss, ds, fs, gs;
-	int ldtr,iomap;
-	
-};
-
-struct TASK{
-	struct TSS32 tss;
-	int segment;
-	int status;
-	int priority;
-};
-struct TASK_CTL{
-	struct TASK task0[MAX_TASK];
-	struct TASK *tasks[MAX_TASK];
-	int now;
-	int taskcount;
-};
 
 
 extern struct TIMER *mt_timer;
@@ -291,6 +298,6 @@ void mt_init(struct MEMMAN *man );
 void mt_tastswitch(void);
 struct TASK* task_alloc(void);
 void task_run(struct TASK* task);
-
+void task_sleep(struct SHEET* sheet,struct TASK* task);
 
 #endif

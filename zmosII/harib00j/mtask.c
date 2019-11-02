@@ -1,5 +1,5 @@
 #include "bootpack.h"
-
+#include <stdio.h>
 
 struct TIMER *mt_timer;
 struct TASK_CTL *taskctl;
@@ -68,6 +68,50 @@ struct TASK* task_alloc(void)
 }
 
 
+void task_sleep(struct SHEET* sheet,struct TASK* task)
+{
+	if (task == NULL ){
+		return;
+	}
+	int ts = 0; /* ts:task_switch  1-> need switch task, 0-> no need*/
+		
+	if(task->status == TASK_STATUS_RUNNING){
+		task->status = TASK_STATUS_SLEEP;
+		if( task == taskctl->tasks[taskctl->now]){
+			ts = 1;
+		}
+		
+		int i;
+		
+		/*find out the task's index*/
+		for(i = 0; i < taskctl->taskcount; i ++){
+			if(taskctl->tasks[i] == task){
+				break;
+			}
+		}
+
+
+		if(i < taskctl->now){
+			taskctl->now --;
+		}
+		
+		/*Remove the task from taskctl->tasks*/
+		taskctl->taskcount --;
+		for(;i < taskctl->taskcount;i ++){
+			taskctl->tasks[i] = taskctl->tasks[i+ 1];
+		}
+		
+		if(taskctl->now >= taskctl->taskcount){
+			taskctl->now = 0;
+		}
+		
+		if(ts != 0 ){
+			//farjmp(0,taskctl->tasks[taskctl->now]->segment);
+		}
+	}
+	return;
+}
+
 void task_run(struct TASK* task)
 {
 	taskctl->tasks[taskctl->taskcount] = task;
@@ -79,7 +123,6 @@ void task_run(struct TASK* task)
 
 void mt_tastswitch(void)
 {
-	int i;
 	struct TASK *nextTask = taskctl->tasks[taskctl->now];
 	taskctl->now ++;
 	
@@ -88,7 +131,10 @@ void mt_tastswitch(void)
 	}
 
 	settime(mt_timer, 2);
-	farjmp(0,nextTask->segment);
+	if(nextTask != 0){
+		farjmp(0,nextTask->segment);
+	}
+	
 	return;
 }
 

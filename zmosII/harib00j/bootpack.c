@@ -3,14 +3,14 @@
 
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
-
+extern struct TASK_CTL *taskctl;
 void task_c_main(struct SHEET* sheet)
 {
 	
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
 
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
 	
 	
 	struct TIMER *timer_print = timer_alloc();
@@ -23,7 +23,8 @@ void task_c_main(struct SHEET* sheet)
 	
 	char s[17];
 	
-
+	int kk  = 1;
+	int t = 1;
 	while(1)
 	{
 		io_cli();
@@ -39,9 +40,26 @@ void task_c_main(struct SHEET* sheet)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Tssk3 :%11d",count/1000000);
+				sprintf(s,"Tsskc :%11d",count/1000000);
 				putfont8_string_sht(sheet,150, 380,COL8_000000,COL8_FFFFFF , s,18);
 				settime(timer_print,1);
+				if(count/1000000 >= 30 && kk){
+					kk = 0;
+					
+					sprintf(s,"taskc :%11d",taskctl->tasks[t]->segment);
+				putfont8_string_sht(sheet,350, 280,COL8_000000,COL8_FFFFFF , s,18);
+					task_sleep(sheet,taskctl->tasks[t]);
+				}
+				
+				if(count/1000000 >= 70 && t == 1){
+					
+					kk = 1;
+					t = 2;
+					sprintf(s,"taakc :%11d",taskctl->tasks[0]->segment);
+				putfont8_string_sht(sheet,350, 380,COL8_000000,COL8_FFFFFF , s,18);
+					
+				}
+
 			}
 		}
 	}
@@ -54,7 +72,7 @@ void task_b_main(void)
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
 
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
 	
 	
 	struct TIMER *timer_print = timer_alloc();
@@ -83,7 +101,7 @@ void task_b_main(void)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Tssk2 :%11d",count/10000000);
+				sprintf(s,"Tsskb :%11d",count/10000000);
 				putfont8_string_sht(sheet_back,150, 480,COL8_000000,COL8_FFFFFF , s,18);
 				settime(timer_print,1);
 			}
@@ -106,7 +124,7 @@ void HariMain(void)
 	
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH);
+	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
 	
 	init_gdtidt();
 	init_pic();
@@ -197,7 +215,7 @@ void HariMain(void)
 	
 	struct TASK *task = task_alloc();
 	int task_b_esp;
-	
+	buff_fifo.task = task;
 	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
 	task->tss.eip = (int) &task_b_main;
 	task->tss.eflags = 0x00000202; /* IF = 1; */
@@ -227,7 +245,7 @@ void HariMain(void)
 	task->tss.gs = 1 * 8;
 	task->priority = 2;
 	
-		*((int *)(task->tss.esp + 4)) = (int) sheet_back;
+	*((int *)(task->tss.esp + 4)) = (int) sheet_back;
 	task_run(task);
 	
 	
