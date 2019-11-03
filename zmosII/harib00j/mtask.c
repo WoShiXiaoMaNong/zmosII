@@ -106,7 +106,7 @@ void task_sleep(struct SHEET* sheet,struct TASK* task)
 		}
 		
 		if(ts != 0 ){
-			//farjmp(0,taskctl->tasks[taskctl->now]->segment);
+			farjmp(0,taskctl->tasks[taskctl->now]->segment);
 		}
 	}
 	return;

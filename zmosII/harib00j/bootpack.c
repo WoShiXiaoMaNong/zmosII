@@ -45,18 +45,12 @@ void task_c_main(struct SHEET* sheet)
 				settime(timer_print,1);
 				if(count/1000000 >= 30 && kk){
 					kk = 0;
-					
-					sprintf(s,"taskc :%11d",taskctl->tasks[t]->segment);
-				putfont8_string_sht(sheet,350, 280,COL8_000000,COL8_FFFFFF , s,18);
-					task_sleep(sheet,taskctl->tasks[t]);
+					task_sleep(sheet,&(taskctl->task0[t]));
 				}
 				
 				if(count/1000000 >= 70 && t == 1){
-					
 					kk = 1;
 					t = 2;
-					sprintf(s,"taakc :%11d",taskctl->tasks[0]->segment);
-				putfont8_string_sht(sheet,350, 380,COL8_000000,COL8_FFFFFF , s,18);
 					
 				}
 
