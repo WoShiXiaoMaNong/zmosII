@@ -1,7 +1,7 @@
 #include "bootpack.h"
 
 
-void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
+void create_windows8(unsigned char *buf,int xsize,int ysize,char *title, char act)
 {
 	static char closebtn[14][16] = {
 		"ooooooooooooooo@",
@@ -21,6 +21,16 @@ void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
 	};
 	int x,y;
 	char color;
+	
+	char title_color,title_back_color;
+	if(act != 0){
+		title_color = COL8_FFFFFF;
+		title_back_color = COL8_000084;
+	}else{
+		title_color = COL8_C6C6C6;
+		title_back_color = COL8_848484;
+	}
+	
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
 	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
@@ -28,10 +38,10 @@ void create_windows8(unsigned char *buf,int xsize,int ysize,char *title)
 	boxfill8(buf, xsize, COL8_848484, xsize - 2, 1,         xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_000000, xsize - 1, 0,         xsize - 1, ysize - 1);
 	boxfill8(buf, xsize, COL8_C6C6C6, 2,         2,         xsize - 3, ysize - 3);
-	boxfill8(buf, xsize, COL8_000084, 3,         3,         xsize - 4, 20       );
+	boxfill8(buf, xsize, title_back_color, 3,         3,         xsize - 4, 20       );
 	boxfill8(buf, xsize, COL8_848484, 1,         ysize - 2, xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_000000, 0,         ysize - 1, xsize - 1, ysize - 1);
-	putfont8_string(buf, xsize, 24, 4, COL8_C6C6C6, title);
+	putfont8_string(buf, xsize, 24, 4, title_color, title);
 	
 	for(y = 0 ; y < 14; y++){
 		for(x = 0 ; x < 16 ; x++){

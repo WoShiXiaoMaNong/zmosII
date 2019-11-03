@@ -24,7 +24,7 @@ void task_c_main(struct SHEET* sheet)
 	char s[17];
 	
 	int kk  = 1;
-	int t = 1;
+
 	while(1)
 	{
 		io_cli();
@@ -40,19 +40,15 @@ void task_c_main(struct SHEET* sheet)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Tsskc :%11d",count/1000000);
-				putfont8_string_sht(sheet,150, 380,COL8_000000,COL8_FFFFFF , s,18);
+				sprintf(s,"Count :%11d",count/1000000);
+				putfont8_string_sht(sheet,5, 28,COL8_000000,COL8_C6C6C6 , s,18);
 				settime(timer_print,1);
 				if(count/1000000 >= 30 && kk){
 					kk = 0;
-					task_sleep(sheet,&(taskctl->task0[t]));
+					task_sleep(sheet,&(taskctl->task0[1]));
 				}
 				
-				if(count/1000000 >= 70 && t == 1){
-					kk = 1;
-					t = 2;
-					
-				}
+			
 
 			}
 		}
@@ -60,7 +56,7 @@ void task_c_main(struct SHEET* sheet)
 }
 
 
-void task_b_main(void)
+void task_b_main(struct SHEET* sheet)
 {
 	
 	struct FIFO32 buff_fifo;
@@ -77,7 +73,7 @@ void task_b_main(void)
 	int data2;
 	int count = 0;
 	
-	struct SHEET *sheet_back = (struct SHEET*) (*((int *) 0x0fec));
+
 	char s[17];
 
 	while(1)
@@ -95,8 +91,8 @@ void task_b_main(void)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Tsskb :%11d",count/10000000);
-				putfont8_string_sht(sheet_back,150, 480,COL8_000000,COL8_FFFFFF , s,18);
+				sprintf(s,"CountB :%11d",count/1000000);
+				putfont8_string_sht(sheet,5, 28,COL8_000000,COL8_C6C6C6 , s,19);
 				settime(timer_print,1);
 			}
 		}
@@ -165,7 +161,7 @@ void HariMain(void)
 	
 	
 	windows_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
-	create_windows8(windows_buf,160,80,"test window");
+	create_windows8(windows_buf,160,80,"test window",1);
 
 	
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
@@ -204,13 +200,36 @@ void HariMain(void)
 	
 	
 	/* 多任务测试 开始 */
+	
+		/*创建子窗口用于多任务测试 */
+	struct SHEET *sheet_windowsa,*sheet_windowsb;
+	sheet_windowsa = sheet_alloc(sheetctl);
+	sheet_windowsb = sheet_alloc(sheetctl);
+	unsigned char *windowsa_buf,*windowsb_buf;
+	windowsa_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
+	windowsb_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
+	
+	
+	create_windows8(windowsa_buf,160,80,"test window A",0);
+	create_windows8(windowsb_buf,160,80,"test window B",0);
+	
+	sheet_setbuf(sheet_windowsa,windowsa_buf,160,80,-1);
+	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
+	
+	sheet_updown(sheet_windowsa,3);
+	sheet_updown(sheet_windowsb,4);
+	
+	sheet_slide(sheet_windowsa, 80 + 160 +10 ,70);
+	sheet_slide(sheet_windowsb, 80 ,70 + 80 + 10);
+
 	mt_init(man);
-	*((int *)0x0fec) = (int) sheet_back;
+	
 	
 	struct TASK *task = task_alloc();
 	int task_b_esp;
 	buff_fifo.task = task;
 	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	 *((int*)(task_b_esp + 4)) = (int)sheet_windowsa;
 	task->tss.eip = (int) &task_b_main;
 	task->tss.eflags = 0x00000202; /* IF = 1; */
 	task->tss.esp = task_b_esp;
@@ -220,7 +239,7 @@ void HariMain(void)
 	task->tss.ds = 1 * 8;
 	task->tss.fs = 1 * 8;
 	task->tss.gs = 1 * 8;
-	task->priority = 2;
+	task->priority = 1;
 	task_run(task);
 	
 	
@@ -237,9 +256,9 @@ void HariMain(void)
 	task->tss.ds = 1 * 8;
 	task->tss.fs = 1 * 8;
 	task->tss.gs = 1 * 8;
-	task->priority = 2;
+	task->priority = 1;
 	
-	*((int *)(task->tss.esp + 4)) = (int) sheet_back;
+	*((int *)(task->tss.esp + 4)) = (int) sheet_windowsb;
 	task_run(task);
 	
 	

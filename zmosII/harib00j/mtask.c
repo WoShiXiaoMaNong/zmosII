@@ -17,7 +17,7 @@ void mt_init(struct MEMMAN *man )
 		taskctl->task0[i].segment = (TASK_GDT0 + i) * 8;
 		set_segmdesc(gdt + TASK_GDT0 + i, 103, (int) &taskctl->task0[i].tss, AR_TSS32);
 		
-		
+		taskctl->tasks[i] = 0;
 	}
 	taskctl->taskcount = 0;
 	taskctl->now = 1;
@@ -70,7 +70,7 @@ struct TASK* task_alloc(void)
 
 void task_sleep(struct SHEET* sheet,struct TASK* task)
 {
-	if (task == NULL ){
+	if (task == 0 ){
 		return;
 	}
 	int ts = 0; /* ts:task_switch  1-> need switch task, 0-> no need*/
@@ -130,7 +130,7 @@ void mt_tastswitch(void)
 		taskctl->now = 0;
 	}
 
-	settime(mt_timer, 2);
+	settime(mt_timer, nextTask->priority);
 	if(nextTask != 0){
 		farjmp(0,nextTask->segment);
 	}
