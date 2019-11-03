@@ -1,4 +1,3 @@
-/* タイマ関係 */
 
 #include "bootpack.h"
 
@@ -6,9 +5,8 @@
 #define PIT_CNT0	0x0040
 
 struct TIMERCTL timerctl;
-
-#define TIMER_FLAGS_ALLOC		1	/* 確保した状態 */
-#define TIMER_FLAGS_USING		2	/* タイマ作動中 */
+#define TIMER_FLAGS_ALLOC		1
+#define TIMER_FLAGS_USING		2
 
 
 
@@ -80,6 +78,7 @@ void settime(struct TIMER *timer, unsigned int timeout)
 		timer->next = t;
 		timerctl.next = timer->timeout;
 		io_store_eflags(e);
+		io_sti();
 		return;
 	}
 	
@@ -91,6 +90,7 @@ void settime(struct TIMER *timer, unsigned int timeout)
 			s->next = timer;
 			timer->next = t; 
 			io_store_eflags(e);
+			io_sti();
 			return;
 		}
 	}
@@ -99,13 +99,12 @@ void settime(struct TIMER *timer, unsigned int timeout)
 void inthandler20(int *esp)
 {
 	io_out8(PIC0_OCW2,0x60 + 0); //通知 主PIC IRQ-0 中断处理完毕。
-	
+	char ts = 0;
 	
 	timerctl.count++;
 	if (timerctl.next > timerctl.count) {
 		return;
 	}
-	
 	
 	struct TIMER *timer = timerctl.t0;
 	while(timer != 0){
@@ -113,12 +112,22 @@ void inthandler20(int *esp)
 		timerctl.next = timer->timeout;
 		if( timer->timeout <= timerctl.count ){
 			timer->flags = TIMER_FLAGS_ALLOC;
-			fifo32_put(timer->fifo,timer->data );
+			
+			if(timer == mt_timer){
+				ts = 1;
+			}else{
+				fifo32_put(timer->fifo,timer->data );
+			}
 			timer = timerctl.t0->next;
 		}else{
 			break;
 		}
 	}
+	
+	if(ts == 1){
+		mt_tastswitch();
+	}
+	
 	
 	return;
 }
