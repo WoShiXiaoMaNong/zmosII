@@ -5,6 +5,13 @@ struct TIMER *mt_timer;
 struct TASK_CTL *taskctl;
 
 
+void task_idle(void)
+{
+	while(1){
+		io_hlt();
+	}
+}
+
 
 
 struct TASK *mt_init(struct MEMMAN *man )
@@ -30,7 +37,7 @@ struct TASK *mt_init(struct MEMMAN *man )
 	
 	taskctl->current_level = 0;
 	task = task_alloc();
-	task->priority = 10;
+	task->priority = 1;
 	task->level = 0;
 	task->status = TASK_STATUS_RUNNING;
 	task_add(task);
@@ -41,6 +48,17 @@ struct TASK *mt_init(struct MEMMAN *man )
 	mt_timer = timer_alloc();
 	settime(mt_timer, task->priority);
 	
+	
+	struct TASK *ideltask = task_alloc();
+	ideltask->tss.eip = (int)&task_idle;
+	ideltask->tss.esp = memman_alloc_4k(man, 64 * 1026) + 64 * 1024;
+	ideltask->tss.es = 1 * 8;
+	ideltask->tss.cs = 2 * 8;
+	ideltask->tss.ss = 1 * 8;
+	ideltask->tss.ds = 1 * 8;
+	ideltask->tss.fs = 1 * 8;
+	ideltask->tss.gs = 1 * 8;
+	task_run(ideltask,MAX_TASK_LEV - 1,2);
 	return task;
 }
 

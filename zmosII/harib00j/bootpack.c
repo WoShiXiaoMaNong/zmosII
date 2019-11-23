@@ -245,7 +245,7 @@ void HariMain(void)
 	task->tss.fs = 1 * 8;
 	task->tss.gs = 1 * 8;
 	task->priority = 1;
-	task_run(task,1,0);
+	//task_run(task,1,0);
 	
 	
 	struct TASK *task2 = task_alloc();
@@ -264,7 +264,7 @@ void HariMain(void)
 	task2->priority = 1;
 	
 	*((int *)(task2->tss.esp + 4)) = (int) sheet_windowsb;
-	task_run(task2,1,0);
+	//task_run(task2,1,0);
 	
 	
 
