@@ -49,10 +49,12 @@
 
 
 /* mtast.c */
-#define MAX_TASK	256
+#define MAX_TASK_LEV		10
+#define MAX_TASK_PER_LEV 	100
+#define MAX_TASK	(MAX_TASK_LEV * MAX_TASK_PER_LEV)
 #define TASK_GDT0   3
-#define TASK_STATUS_RUNNING		1
 #define TASK_STATUS_STOPED		0
+#define TASK_STATUS_RUNNING		1
 #define TASK_STATUS_FREE		2
 #define TASK_STATUS_ALLOCATED	3
 #define TASK_STATUS_SLEEP		4
@@ -70,12 +72,20 @@ struct TASK{
 	int segment;
 	int status;
 	int priority;
+	int level;
 };
-struct TASK_CTL{
-	struct TASK task0[MAX_TASK];
-	struct TASK *tasks[MAX_TASK];
+
+struct TASK_LEVEL{
 	int now;
 	int taskcount;
+	struct TASK *tasks[MAX_TASK_PER_LEV];
+};
+
+struct TASK_CTL{
+	struct TASK task0[MAX_TASK];
+	struct TASK_LEVEL task_levels[MAX_TASK_LEV];
+	int current_level;
+	char need_change_level;
 };
 
 
@@ -294,10 +304,14 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 
 extern struct TIMER *mt_timer;
-void mt_init(struct MEMMAN *man );
+struct TASK * mt_init(struct MEMMAN *man );
 void mt_tastswitch(void);
+void mt_tastswitchsub(void);
 struct TASK* task_alloc(void);
-void task_run(struct TASK* task);
-void task_sleep(struct SHEET* sheet,struct TASK* task);
+void task_run(struct TASK* task,int level, int priority);
+void task_sleep(struct TASK* task);
+void task_add(struct TASK* task);
+void task_remove(struct TASK* task);
+struct TASK* task_now(void);
 
 #endif

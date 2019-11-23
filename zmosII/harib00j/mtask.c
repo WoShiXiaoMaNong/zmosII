@@ -4,7 +4,10 @@
 struct TIMER *mt_timer;
 struct TASK_CTL *taskctl;
 
-void mt_init(struct MEMMAN *man )
+
+
+
+struct TASK *mt_init(struct MEMMAN *man )
 {
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
 	taskctl = (struct TASK_CTL*)memman_alloc_4k(man, sizeof(struct TASK_CTL));
@@ -17,18 +20,28 @@ void mt_init(struct MEMMAN *man )
 		taskctl->task0[i].segment = (TASK_GDT0 + i) * 8;
 		set_segmdesc(gdt + TASK_GDT0 + i, 103, (int) &taskctl->task0[i].tss, AR_TSS32);
 		
-		taskctl->tasks[i] = 0;
 	}
-	taskctl->taskcount = 0;
-	taskctl->now = 1;
+	
+	for(i = 0 ; i < MAX_TASK_LEV ;i ++){
+		taskctl->task_levels[i].now = 0;
+		taskctl->task_levels[i].taskcount = 0;
+	}
+	
+	
+	taskctl->current_level = 0;
 	task = task_alloc();
-	task->priority = 2;
-	task_run(task);
+	task->priority = 10;
+	task->level = 0;
+	task->status = TASK_STATUS_RUNNING;
+	task_add(task);
+	
+	mt_tastswitchsub();
+	
 	load_tr(task->segment);
 	mt_timer = timer_alloc();
 	settime(mt_timer, task->priority);
 	
-	return;
+	return task;
 }
 
 
@@ -68,77 +81,146 @@ struct TASK* task_alloc(void)
 }
 
 
-void task_sleep(struct SHEET* sheet,struct TASK* task)
+void task_sleep(struct TASK* task)
 {
 	if (task == 0 ){
 		return;
 	}
-	int ts = 0; /* ts:task_switch  1-> need switch task, 0-> no need*/
-		
+	struct TASK* now;
 	if(task->status == TASK_STATUS_RUNNING){
-		task->status = TASK_STATUS_SLEEP;
-		if( task == taskctl->tasks[taskctl->now]){
-			ts = 1;
+		now =  task_now();
+		task_remove(task);
+		
+		if(task == now){
+			mt_tastswitchsub();
+			now =  task_now();
+			farjmp(0,now->segment);
 		}
+	}
+	return;
+}
+
+void task_run(struct TASK* task,int level, int priority)
+{
+	if(level < 0 ){
+		level = task->level;
+	}
+	
+	if(priority > 0){
+		task->priority = priority;
+	}
+	
+	if(task->status == TASK_STATUS_RUNNING && task->level != level){
+		task_remove(task);
+	}
+	
+	if(task->status != TASK_STATUS_RUNNING){
+		task->level = level;
+		task_add(task);
+	}
+	
+	taskctl->need_change_level = 1;
+	
+	return;
+}
+
+
+void task_add(struct TASK* task)
+{
+	struct TASK_LEVEL *task_level = &taskctl->task_levels[task->level];
+	task_level->tasks[task_level->taskcount] = task;
+	task_level->taskcount ++;
+	task->status = TASK_STATUS_RUNNING;
+	return;
+}
+
+
+
+void task_remove(struct TASK* task)
+{
+	if (task == 0 ){
+		return;
+	}
+	
+	struct TASK_LEVEL *tasklev = &(taskctl->task_levels[task->level]);
+	
+	
+	
+	if(task->status == TASK_STATUS_RUNNING){
 		
 		int i;
 		
 		/*find out the task's index*/
-		for(i = 0; i < taskctl->taskcount; i ++){
-			if(taskctl->tasks[i] == task){
+		for(i = 0; i < tasklev->taskcount; i ++){
+			if(tasklev->tasks[i] == task){
 				break;
 			}
 		}
 
 
-		if(i < taskctl->now){
-			taskctl->now --;
+		if(i < tasklev->now){
+			tasklev->now --;
 		}
 		
 		/*Remove the task from taskctl->tasks*/
-		taskctl->taskcount --;
-		for(;i < taskctl->taskcount;i ++){
-			taskctl->tasks[i] = taskctl->tasks[i+ 1];
+		tasklev->taskcount --;
+		for(;i < tasklev->taskcount;i ++){
+			tasklev->tasks[i] = tasklev->tasks[i+ 1];
 		}
 		
-		if(taskctl->now >= taskctl->taskcount){
-			taskctl->now = 0;
+		if(tasklev->now >= tasklev->taskcount){
+			tasklev->now = 0;
 		}
+		task->status = TASK_STATUS_SLEEP;
 		
-		if(ts != 0 ){
-			farjmp(0,taskctl->tasks[taskctl->now]->segment);
-		}
 	}
 	return;
+	
 }
 
-void task_run(struct TASK* task)
+struct TASK* task_now(void)
 {
-	taskctl->tasks[taskctl->taskcount] = task;
-	task->status = TASK_STATUS_RUNNING;
-	taskctl->taskcount ++;
-	return;
+	struct TASK_LEVEL task_level_now = taskctl->task_levels[taskctl->current_level];
+	return task_level_now.tasks[task_level_now.now];	
 }
-
 
 void mt_tastswitch(void)
 {
-	struct TASK *nextTask = taskctl->tasks[taskctl->now];
-	taskctl->now ++;
 	
-	if(taskctl->now >= taskctl->taskcount){
-		taskctl->now = 0;
+	struct TASK_LEVEL *task_level_now = &(taskctl->task_levels[taskctl->current_level]);
+	struct TASK *nextTask, *nowTask = task_now();
+	task_level_now->now ++;
+	
+	if(task_level_now->now >= task_level_now->taskcount){
+		task_level_now->now = 0;
 	}
-
+	
+	if(taskctl->need_change_level){
+		mt_tastswitchsub();
+		task_level_now = &(taskctl->task_levels[taskctl->current_level]);
+	}
+	
+	nextTask = task_level_now->tasks[task_level_now->now];
 	settime(mt_timer, nextTask->priority);
-	if(nextTask != 0){
+	if(nextTask != 0 && nextTask != nowTask){
 		farjmp(0,nextTask->segment);
 	}
 	
 	return;
 }
 
-
+void mt_tastswitchsub(void)
+{
+	int i;
+	for(i = 0; i < MAX_TASK_LEV ;i ++){
+		if(taskctl->task_levels[i].taskcount > 0){
+			break;
+		}
+	}
+	
+	taskctl->current_level = i;
+	taskctl->need_change_level = 0;
+}
 
 
 

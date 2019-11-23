@@ -40,13 +40,15 @@ void task_c_main(struct SHEET* sheet)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"Count :%11d",count/1000000);
-				putfont8_string_sht(sheet,5, 28,COL8_000000,COL8_C6C6C6 , s,18);
-				settime(timer_print,1);
-				if(count/1000000 >= 30 && kk){
-					kk = 0;
-					task_sleep(sheet,&(taskctl->task0[1]));
+				if(count % 5 == 0 ){
+					sprintf(s,"CountB :%11d",count/100000);
 				}
+				putfont8_string_sht(sheet,5, 48,COL8_000000,COL8_C6C6C6 , s,19);
+				settime(timer_print,1);
+			//	if(count/1000000 >= 30 && kk){
+				//	kk = 0;
+				//	task_sleep(sheet,&(taskctl->task0[1]));
+				//}
 				
 			
 
@@ -91,7 +93,9 @@ void task_b_main(struct SHEET* sheet)
 			io_sti();
 			
 			if(data == 1){
-				sprintf(s,"CountB :%11d",count/1000000);
+				if(count % 5 == 0 ){
+					sprintf(s,"CountA :%11d",count/100000);
+				}
 				putfont8_string_sht(sheet,5, 28,COL8_000000,COL8_C6C6C6 , s,19);
 				settime(timer_print,1);
 			}
@@ -222,13 +226,14 @@ void HariMain(void)
 	sheet_slide(sheet_windowsa, 80 + 160 +10 ,70);
 	sheet_slide(sheet_windowsb, 80 ,70 + 80 + 10);
 
-	mt_init(man);
+	struct TASK *task_main = mt_init(man);
 	
 	
 	struct TASK *task = task_alloc();
 	int task_b_esp;
-	buff_fifo.task = task;
-	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
+	
+	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;  //issue here~~!
+	
 	 *((int*)(task_b_esp + 4)) = (int)sheet_windowsa;
 	task->tss.eip = (int) &task_b_main;
 	task->tss.eflags = 0x00000202; /* IF = 1; */
@@ -240,30 +245,30 @@ void HariMain(void)
 	task->tss.fs = 1 * 8;
 	task->tss.gs = 1 * 8;
 	task->priority = 1;
-	task_run(task);
+	task_run(task,1,0);
 	
 	
-	task = task_alloc();
+	struct TASK *task2 = task_alloc();
 	int task_c_esp;
 	
 	task_c_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
-	task->tss.eip = (int) &task_c_main;
-	task->tss.eflags = 0x00000202; /* IF = 1; */
-	task->tss.esp = task_c_esp;
-	task->tss.es = 1 * 8;
-	task->tss.cs = 2 * 8;
-	task->tss.ss = 1 * 8;
-	task->tss.ds = 1 * 8;
-	task->tss.fs = 1 * 8;
-	task->tss.gs = 1 * 8;
-	task->priority = 1;
+	task2->tss.eip = (int) &task_b_main;
+	task2->tss.eflags = 0x00000202; /* IF = 1; */
+	task2->tss.esp = task_c_esp;
+	task2->tss.es = 1 * 8;
+	task2->tss.cs = 2 * 8;
+	task2->tss.ss = 1 * 8;
+	task2->tss.ds = 1 * 8;
+	task2->tss.fs = 1 * 8;
+	task2->tss.gs = 1 * 8;
+	task2->priority = 1;
 	
-	*((int *)(task->tss.esp + 4)) = (int) sheet_windowsb;
-	task_run(task);
+	*((int *)(task2->tss.esp + 4)) = (int) sheet_windowsb;
+	task_run(task2,1,0);
 	
 	
 
-
+	buff_fifo.task = task_main;
 	/* 多任务测试 结束 */
 	
 	
@@ -276,7 +281,7 @@ void HariMain(void)
 		
 		io_cli();
 		if( fifo32_status(&buff_fifo) == 0){
-			//io_stihlt();
+			task_sleep(task_main);
 			io_sti();
 		}else{
 			data = fifo32_get(&buff_fifo);
