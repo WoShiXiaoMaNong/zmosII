@@ -4,26 +4,27 @@
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 extern struct TASK_CTL *taskctl;
-void task_c_main(struct SHEET* sheet)
+
+
+void task_console(struct SHEET* sheet)
 {
 	
 	struct FIFO32 buff_fifo;
 	int buff[BUF_LENGTH];
-
+	int cursor_x,cursor_y,cursor_h = 16;
+	int cursor_color = COL8_000000;
+	cursor_x = 10;
+	cursor_y = 32;
 	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
 	
 	
 	struct TIMER *timer_print = timer_alloc();
-	timer_init(timer_print,&buff_fifo,1);
+	timer_init(timer_print,&buff_fifo,2);
 	
-	settime(timer_print,1);
+	settime(timer_print,2);
 	int data;
-	int data2;
 	int count = 0;
-	
-	char s[17];
-	
-	int kk  = 1;
+
 
 	while(1)
 	{
@@ -39,20 +40,20 @@ void task_c_main(struct SHEET* sheet)
 			data = fifo32_get(&buff_fifo);
 			io_sti();
 			
-			if(data == 1){
-				if(count % 5 == 0 ){
-					sprintf(s,"CountB :%11d",count/100000);
-				}
-				putfont8_string_sht(sheet,5, 48,COL8_000000,COL8_C6C6C6 , s,19);
-				settime(timer_print,1);
-			//	if(count/1000000 >= 30 && kk){
-				//	kk = 0;
-				//	task_sleep(sheet,&(taskctl->task0[1]));
-				//}
-				
 			
-
-			}
+			if(data == 2){
+				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				settime(timer_print,50);
+				timer_init(timer_print,&buff_fifo,3);
+				
+			}else if(data == 3){
+				boxfill8(sheet->buf,sheet->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				settime(timer_print,50);
+				timer_init(timer_print,&buff_fifo,2);
+			};
+			sheet_refresh(sheet, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+			
+			
 		}
 	}
 }
@@ -70,9 +71,10 @@ void task_b_main(struct SHEET* sheet)
 	struct TIMER *timer_print = timer_alloc();
 	timer_init(timer_print,&buff_fifo,1);
 	
+	
+	
 	settime(timer_print,1);
 	int data;
-	int data2;
 	int count = 0;
 	
 
@@ -171,14 +173,11 @@ void HariMain(void)
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
 	sheet_setbuf(sheet_mouse, mouse_buf, 16,16, 99);/*设置透明色号为99*/
 	sheet_setbuf(sheet_windows,windows_buf,160,80,-1);
-	sheet_updown(sheet_back,0);
-	sheet_updown(sheet_windows,1);
-	sheet_updown(sheet_mouse,2);
-
+	
 	/*Text input in Test window*/
 	make_textbox8(sheet_windows, 8,48,144,16,COL8_FFFFFF);
 
-	sheet_slide(sheet_windows, 80,70);
+	
 
 	init_screen(back_buf, binfo->scrnx, binfo->scrny);
 	/* init mouse start */
@@ -186,10 +185,10 @@ void HariMain(void)
 	mx = binfo->scrnx / 2 - 16;
 	my = binfo->scrny / 2 - 16;
 	init_mouse_cursor8(mouse_buf,99);/*设置透明色号为99*/
-	sheet_slide(sheet_mouse, mx,my);
+	
 	/* init mouse end */
 	
-	sheet_slide(sheet_back, 0,0);
+	
 	/*输出内存使用信息*/
 	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
 	putfont8_string_sht(sheet_back,0, 32,COL8_FF0000,COL8_008484 , s,20);
@@ -203,6 +202,22 @@ void HariMain(void)
 	int data;
 	
 	
+	
+		
+	/* 命令行窗口 开始 */
+	struct SHEET *sheet_cons;
+	sheet_cons = sheet_alloc(sheetctl);
+	unsigned char *cons_buf = (unsigned char*)memman_alloc_4k(man,180 * 320);
+	create_windows8(cons_buf,320,180,"console",0);
+	sheet_setbuf(sheet_cons,cons_buf,320,180,99);
+	
+	make_textbox8(sheet_cons, 8,30,300,140,COL8_000000);
+	
+	
+	/* 命令行窗口 结束 */
+	
+	
+	
 	/* 多任务测试 开始 */
 	
 		/*创建子窗口用于多任务测试 */
@@ -214,38 +229,37 @@ void HariMain(void)
 	windowsb_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
 	
 	
-	create_windows8(windowsa_buf,160,80,"test window A",0);
+
 	create_windows8(windowsb_buf,160,80,"test window B",0);
 	
-	sheet_setbuf(sheet_windowsa,windowsa_buf,160,80,-1);
+
 	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
 	
-	sheet_updown(sheet_windowsa,3);
-	sheet_updown(sheet_windowsb,4);
+
 	
-	sheet_slide(sheet_windowsa, 80 + 160 +10 ,70);
-	sheet_slide(sheet_windowsb, 80 ,70 + 80 + 10);
+
+	
 
 	struct TASK *task_main = mt_init(man);
 	
 	
-	struct TASK *task = task_alloc();
-	int task_b_esp;
+	struct TASK *task_cons = task_alloc();
 	
-	task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;  //issue here~~!
+	int task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024; 
 	
-	 *((int*)(task_b_esp + 4)) = (int)sheet_windowsa;
-	task->tss.eip = (int) &task_b_main;
-	task->tss.eflags = 0x00000202; /* IF = 1; */
-	task->tss.esp = task_b_esp;
-	task->tss.es = 1 * 8;
-	task->tss.cs = 2 * 8;
-	task->tss.ss = 1 * 8;
-	task->tss.ds = 1 * 8;
-	task->tss.fs = 1 * 8;
-	task->tss.gs = 1 * 8;
-	task->priority = 1;
-	//task_run(task,1,0);
+	*((int*)(task_b_esp + 4)) = (int)sheet_cons;
+	 
+	task_cons->tss.eip = (int) &task_console;
+	task_cons->tss.eflags = 0x00000202; /* IF = 1; */
+	task_cons->tss.esp = task_b_esp;
+	task_cons->tss.es = 1 * 8;
+	task_cons->tss.cs = 2 * 8;
+	task_cons->tss.ss = 1 * 8;
+	task_cons->tss.ds = 1 * 8;
+	task_cons->tss.fs = 1 * 8;
+	task_cons->tss.gs = 1 * 8;
+	task_cons->priority = 1;
+	task_run(task_cons,1,0);
 	
 	
 	struct TASK *task2 = task_alloc();
@@ -264,16 +278,26 @@ void HariMain(void)
 	task2->priority = 1;
 	
 	*((int *)(task2->tss.esp + 4)) = (int) sheet_windowsb;
-	//task_run(task2,1,0);
+	task_run(task2,1,0);
 	
 	
 
 	buff_fifo.task = task_main;
 	/* 多任务测试 结束 */
 	
+
 	
+	sheet_updown(sheet_back,0);
+	sheet_updown(sheet_windows,1);
+	sheet_updown(sheet_cons,2);
+	sheet_updown(sheet_windowsb,3);
+	sheet_updown(sheet_mouse,4);
 	
-	
+	sheet_slide(sheet_back, 0,0);
+	sheet_slide(sheet_windows, 80,70);
+	sheet_slide(sheet_windowsb, 80 ,70 + 80 + 10);
+	sheet_slide(sheet_cons, 500,60);
+	sheet_slide(sheet_mouse, mx,my);
 	
 	while(1){
 		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
