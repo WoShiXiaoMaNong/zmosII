@@ -220,31 +220,18 @@ void HariMain(void)
 	
 	/* 多任务测试 开始 */
 	
-		/*创建子窗口用于多任务测试 */
-	struct SHEET *sheet_windowsa,*sheet_windowsb;
-	sheet_windowsa = sheet_alloc(sheetctl);
+	struct TASK *task_main = mt_init(man); 
+	
+	/*创建子窗口用于多任务测试 */
+	struct SHEET *sheet_windowsb;
 	sheet_windowsb = sheet_alloc(sheetctl);
-	unsigned char *windowsa_buf,*windowsb_buf;
-	windowsa_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
+	unsigned char *windowsb_buf;
 	windowsb_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
-	
-	
-
 	create_windows8(windowsb_buf,160,80,"test window B",0);
-	
-
 	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
-	
-
-	
-
-	
-
-	struct TASK *task_main = mt_init(man);
 	
 	
 	struct TASK *task_cons = task_alloc();
-	
 	int task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024; 
 	
 	*((int*)(task_b_esp + 4)) = (int)sheet_cons;
