@@ -59,6 +59,9 @@
 #define TASK_STATUS_ALLOCATED	3
 #define TASK_STATUS_SLEEP		4
 
+
+
+
 struct TSS32{
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx,ebx, esp, ebp, esi, edi;
@@ -73,6 +76,7 @@ struct TASK{
 	int status;
 	int priority;
 	int level;
+	struct FIFO32 *buf;
 };
 
 struct TASK_LEVEL{
@@ -303,11 +307,12 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 
 
+/*mtask.c*/
 extern struct TIMER *mt_timer;
-struct TASK * mt_init(struct MEMMAN *man );
+struct TASK * mt_init(struct MEMMAN *man,struct FIFO32 *buf );
 void mt_tastswitch(void);
 void mt_tastswitchsub(void);
-struct TASK* task_alloc(void);
+struct TASK* task_alloc(struct FIFO32 *buf);
 void task_run(struct TASK* task,int level, int priority);
 void task_sleep(struct TASK* task);
 void task_add(struct TASK* task);

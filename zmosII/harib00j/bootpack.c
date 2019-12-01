@@ -1,30 +1,28 @@
 #include <stdio.h>
 #include "bootpack.h"
 
+
 #define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 extern struct TASK_CTL *taskctl;
+extern char keytable[];
 
-
-void task_console(struct SHEET* sheet)
+void task_console(struct SHEET* sheet,struct FIFO32 *buff_fifo)
 {
 	
-	struct FIFO32 buff_fifo;
-	int buff[BUF_LENGTH];
 	int cursor_x,cursor_y,cursor_h = 16;
 	int cursor_color = COL8_000000;
+	int init_cursor_x = 10;
 	cursor_x = 10;
 	cursor_y = 32;
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
-	
 	
 	struct TIMER *timer_print = timer_alloc();
-	timer_init(timer_print,&buff_fifo,2);
+	timer_init(timer_print,buff_fifo,2);
 	
 	settime(timer_print,2);
 	int data;
 	int count = 0;
-
+	char s[20];
 
 	while(1)
 	{
@@ -33,23 +31,45 @@ void task_console(struct SHEET* sheet)
 		if(count <=0 ){
 			count = 0;
 		}
-		if( fifo32_status(&buff_fifo) == 0)  {
+		if( fifo32_status(buff_fifo) == 0)  {
 			io_sti();
 		}else{
 			
-			data = fifo32_get(&buff_fifo);
+			data = fifo32_get(buff_fifo);
 			io_sti();
 			
 			
 			if(data == 2){
 				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				settime(timer_print,50);
-				timer_init(timer_print,&buff_fifo,3);
+				timer_init(timer_print,buff_fifo,3);
 				
 			}else if(data == 3){
 				boxfill8(sheet->buf,sheet->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				settime(timer_print,50);
-				timer_init(timer_print,&buff_fifo,2);
+				timer_init(timer_print,buff_fifo,2);
+			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
+				//字符输入测试 >>>>开始<<<<
+				data = data - 256;
+				if(data < 0x54){
+					if(data == 0x1c){  // 0x1c : Enter
+						putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
+						cursor_y += 16;
+						cursor_x = init_cursor_x;
+						continue;
+					}else if(keytable[data] != 0){
+						s[0] = keytable[data];
+						s[1] = 0;
+						putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, s,1);
+						cursor_x += 8;
+					}else if(data == 0x0e){
+						cursor_x -= 8;
+						putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
+					}
+				}
+				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				//字符输入测试 >>>>结束<<<<
+				
 			};
 			sheet_refresh(sheet, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 			
@@ -118,9 +138,9 @@ void HariMain(void)
 	char s[256];
 	
 	
-	struct FIFO32 buff_fifo;
+	struct FIFO32 buff_main;
 	int buff[BUF_LENGTH];
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
+	fifo32_init(&buff_main,buff,BUF_LENGTH,0);
 	
 	init_gdtidt();
 	init_pic();
@@ -130,8 +150,8 @@ void HariMain(void)
 	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
 	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
 	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
-	init_keyboard(&buff_fifo,256);
-	enable_mouse(&mdec,&buff_fifo,512);
+	init_keyboard(&buff_main,256);
+	enable_mouse(&mdec,&buff_main,512);
 	init_palette();
 	
 	
@@ -149,8 +169,8 @@ void HariMain(void)
 	
 
 	
-	timer_init(timer,&buff_fifo,1);
-	timer_init(timer2,&buff_fifo,2);
+	timer_init(timer,&buff_main,1);
+	timer_init(timer2,&buff_main,2);
 
 	settime(timer,130);
 	settime(timer2,200);
@@ -220,9 +240,14 @@ void HariMain(void)
 	
 	/* 多任务测试 开始 */
 	
-	struct TASK *task_main = mt_init(man); 
-	
+	struct TASK *task_main = mt_init(man,&buff_main); 
 	/*创建子窗口用于多任务测试 */
+	
+	struct FIFO32 *buff_fifo_cons;
+	int buff_cons[BUF_LENGTH];
+	fifo32_init(buff_fifo_cons,buff_cons,BUF_LENGTH,0);
+	
+	
 	struct SHEET *sheet_windowsb;
 	sheet_windowsb = sheet_alloc(sheetctl);
 	unsigned char *windowsb_buf;
@@ -231,10 +256,11 @@ void HariMain(void)
 	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
 	
 	
-	struct TASK *task_cons = task_alloc();
+	struct TASK *task_cons = task_alloc(buff_fifo_cons);
 	int task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024; 
 	
 	*((int*)(task_b_esp + 4)) = (int)sheet_cons;
+	*((int*)(task_b_esp + 8)) = (int)buff_fifo_cons;
 	 
 	task_cons->tss.eip = (int) &task_console;
 	task_cons->tss.eflags = 0x00000202; /* IF = 1; */
@@ -246,10 +272,11 @@ void HariMain(void)
 	task_cons->tss.fs = 1 * 8;
 	task_cons->tss.gs = 1 * 8;
 	task_cons->priority = 1;
+	task_cons->buf = buff_fifo_cons;
 	task_run(task_cons,1,0);
 	
 	
-	struct TASK *task2 = task_alloc();
+	struct TASK *task2 = task_alloc(0);
 	int task_c_esp;
 	
 	task_c_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
@@ -269,7 +296,7 @@ void HariMain(void)
 	
 	
 
-	buff_fifo.task = task_main;
+	buff_main.task = task_main;
 	/* 多任务测试 结束 */
 	
 
@@ -291,11 +318,11 @@ void HariMain(void)
 		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
 		
 		io_cli();
-		if( fifo32_status(&buff_fifo) == 0){
+		if( fifo32_status(&buff_main) == 0){
 			task_sleep(task_main);
 			io_sti();
 		}else{
-			data = fifo32_get(&buff_fifo);
+			data = fifo32_get(&buff_main);
 			io_sti();
 			sprintf(s,"d:%04X",data);
 			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
@@ -307,11 +334,11 @@ void HariMain(void)
 					if(data == 1){
 					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,9);
 					settime(timer,50);
-					timer_init(timer,&buff_fifo,0);
+					timer_init(timer,&buff_main,0);
 					}else{
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50);
-						timer_init(timer,&buff_fifo,1);
+						timer_init(timer,&buff_main,1);
 						
 					};
 					
@@ -319,30 +346,28 @@ void HariMain(void)
 					if(data == 2){
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 						settime(timer2,50);
-						timer_init(timer2,&buff_fifo,3);
+						timer_init(timer2,&buff_main,3);
 						
 					}else{
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 						settime(timer2,50);
-						timer_init(timer2,&buff_fifo,2);
+						timer_init(timer2,&buff_main,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				}
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
-				static char keytable[0x54] = {
-					0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
-					'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
-					'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
-					'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
-					0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
-					'2', '3', '0', '.'};
 			
+			
+				fifo32_put(task_cons->buf,data);//(struct FIFO32 *fifo32,int data)
+				
+				
 				data = data - 256;
 				sprintf(s,"%02X",data);
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
 				
 				
+				/*
 				//字符输入测试 >>>>开始<<<<
 				if(data < 0x54){
 					if(keytable[data] != 0){
@@ -358,6 +383,8 @@ void HariMain(void)
 				}
 				boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+				
+				*/
 				//字符输入测试 >>>>结束<<<<
 				
 			}else if(data >= 512 && data <768 ){/* 鼠标输入*/
@@ -373,7 +400,7 @@ void HariMain(void)
 					}
 					if( (mdec.btn & 0x02) != 0){
 						s[15] = 'R';
-						sheet_updown(sheet_mouse,sheet_mouse->height + 1);
+						//sheet_updown(sheet_mouse,sheet_mouse->height + 1);
 					}
 					if( (mdec.btn & 0x04) != 0){
 						s[14] = 'C';
