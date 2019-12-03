@@ -142,23 +142,9 @@ void HariMain(void)
 	struct MOUSE_DESC mdec;
 	char s[256];
 	
-	
-	struct FIFO32 buff_main;
-	int buff[BUF_LENGTH];
-	fifo32_init(&buff_main,buff,BUF_LENGTH,0);
-	
 	init_gdtidt();
 	init_pic();
 	io_sti();
-	
-	init_pit(); /*初始化定时器芯片，每秒100次*/
-	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
-	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
-	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
-	init_keyboard(&buff_main,256);
-	enable_mouse(&mdec,&buff_main,512);
-	init_palette();
-	
 	
 	/*初始化内存管理器*/
 	unsigned int mem_total;
@@ -167,6 +153,31 @@ void HariMain(void)
 	memman_free(man,0x00001000,0x009e000);
 	memman_free(man,0x00400000,mem_total - 0x00400000);
 	
+	
+	init_pit(); /*初始化定时器芯片，每秒100次*/
+	/*由于 init_pic的时候 禁用了所有IRQ，这里需要手动开放需要的IRQ */
+	io_out8(PIC0_IMR, 0xf8); /* PIC0(主PIC) 开放IRQ-0(定时器) IRQ-1(键盘) IRQ-2(链接 从PIC) (1111_1000) */
+	io_out8(PIC1_IMR, 0xef); /* PIC1(从PIC) 开放IRQ-12(鼠标) (1110_1111) */
+	
+	
+	
+	/* 初始化 task 管理器 start*/
+	struct FIFO32 buff_mai;
+	struct FIFO32 *buff_main = &buff_mai;
+	int buff[BUF_LENGTH];
+	fifo32_init(buff_main,buff,BUF_LENGTH,0);
+	
+	struct TASK *task_main = mt_init(man,buff_main); 
+	buff_main->task = task_main;
+	/* 初始化 task 管理器 end*/
+	
+	
+	
+	init_keyboard(buff_main,256);
+	enable_mouse(&mdec,buff_main,512);
+	init_palette();
+	
+		
 	/*设置定时器*/
 	//void timer_init(truct TIMER *timer,struct FIFO32 *fifo,int data)
 	struct TIMER *timer = timer_alloc();
@@ -174,8 +185,8 @@ void HariMain(void)
 	
 
 	
-	timer_init(timer,&buff_main,1);
-	timer_init(timer2,&buff_main,2);
+	timer_init(timer,buff_main,1);
+	timer_init(timer2,buff_main,2);
 
 	settime(timer,130);
 	settime(timer2,200);
@@ -245,7 +256,7 @@ void HariMain(void)
 	
 	/* 多任务测试 开始 */
 	
-	struct TASK *task_main = mt_init(man,&buff_main); 
+	
 	/*创建子窗口用于多任务测试 */
 	
 	struct FIFO32 *buff_fifo_cons;
@@ -301,7 +312,7 @@ void HariMain(void)
 	
 	
 
-	buff_main.task = task_main;
+	
 	/* 多任务测试 结束 */
 	
 
@@ -323,11 +334,11 @@ void HariMain(void)
 		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
 		
 		io_cli();
-		if( fifo32_status(&buff_main) == 0){
+		if( fifo32_status(buff_main) == 0){
 			task_sleep(task_main);
 			io_sti();
 		}else{
-			data = fifo32_get(&buff_main);
+			data = fifo32_get(buff_main);
 			io_sti();
 			sprintf(s,"d:%04X",data);
 			putfont8_string_sht(sheet_back,220, 150,COL8_FFFF00,COL8_008484 , s,10);
@@ -339,11 +350,11 @@ void HariMain(void)
 					if(data == 1){
 					putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , s,9);
 					settime(timer,50);
-					timer_init(timer,&buff_main,0);
+					timer_init(timer,buff_main,0);
 					}else{
 						putfont8_string_sht(sheet_back,20, 150,COL8_FFFF00,COL8_008484 , "",9);
 						settime(timer,50);
-						timer_init(timer,&buff_main,1);
+						timer_init(timer,buff_main,1);
 						
 					};
 					
@@ -351,12 +362,12 @@ void HariMain(void)
 					if(data == 2){
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 						settime(timer2,50);
-						timer_init(timer2,&buff_main,3);
+						timer_init(timer2,buff_main,3);
 						
 					}else{
 						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 						settime(timer2,50);
-						timer_init(timer2,&buff_main,2);
+						timer_init(timer2,buff_main,2);
 					};
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				}

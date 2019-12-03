@@ -76,7 +76,7 @@ struct TASK{
 	int status;
 	int priority;
 	int level;
-	struct FIFO32 *fifo32;
+	struct FIFO32 *fifo32;  // To be modify struct FIFO32 fifo32
 };
 
 struct TASK_LEVEL{
