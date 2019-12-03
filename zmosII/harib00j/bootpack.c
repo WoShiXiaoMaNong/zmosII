@@ -7,6 +7,10 @@ extern struct TIMERCTL timerctl;
 extern struct TASK_CTL *taskctl;
 extern char keytable[];
 
+
+
+
+
 void task_console(struct SHEET* sheet,struct FIFO32 *buff_fifo)
 {
 	
@@ -129,6 +133,7 @@ void task_b_main(struct SHEET* sheet)
 void HariMain(void)
 {
 	
+	int key_to = 0;
 	
 	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
 	int cursor_color = COL8_000000;
@@ -272,7 +277,7 @@ void HariMain(void)
 	task_cons->tss.fs = 1 * 8;
 	task_cons->tss.gs = 1 * 8;
 	task_cons->priority = 1;
-	task_cons->buf = buff_fifo_cons;
+	task_cons->fifo32 = buff_fifo_cons;
 	task_run(task_cons,1,0);
 	
 	
@@ -358,33 +363,48 @@ void HariMain(void)
 				
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
 			
-			
-				fifo32_put(task_cons->buf,data);//(struct FIFO32 *fifo32,int data)
-				
-				
 				data = data - 256;
+				if(data == 0x0f){ // Tab 键，切换窗口。目前是hard code。
+					
+					if(key_to == 0){
+						key_to = 1;
+						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"console", 1);
+						create_title_bar(sheet_windows->buf,sheet_windows->bxsize,"test window", 0);
+					}else{
+						key_to = 0;
+						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"console", 0);
+						create_title_bar(sheet_windows->buf,sheet_windows->bxsize, "test window", 1);
+					}
+					
+					sheet_refresh(sheet_cons, 0,0,sheet_cons->bxsize, sheet_cons->bysize);
+					sheet_refresh(sheet_windows, 0,0,sheet_windows->bxsize, sheet_windows->bysize);
+				}
+				
+				
 				sprintf(s,"%02X",data);
 				putfont8_string_sht(sheet_back,0, 16,COL8_FFFFFF,COL8_008484 , s,2);
 				
 				
-				/*
 				//字符输入测试 >>>>开始<<<<
-				if(data < 0x54){
-					if(keytable[data] != 0){
-						s[0] = keytable[data];
-						s[1] = 0;
-						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , s,1);
-						cursor_x += 8;
+				if(key_to == 1){
+					fifo32_put(task_cons->fifo32,data + 256);//(struct FIFO32 *fifo32,int data)
+				}else{
+					if(data < 0x54){
+						if(keytable[data] != 0){
+							s[0] = keytable[data];
+							s[1] = 0;
+							putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , s,1);
+							cursor_x += 8;
+						}
+						if(data == 0x0e){
+							cursor_x -= 8;
+							putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , " ",1);
+						}
 					}
-					if(data == 0x0e){
-						cursor_x -= 8;
-						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , " ",1);
-					}
-				}
-				boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-				sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+					boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				
-				*/
+				}
 				//字符输入测试 >>>>结束<<<<
 				
 			}else if(data >= 512 && data <768 ){/* 鼠标输入*/

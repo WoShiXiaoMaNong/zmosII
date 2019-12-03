@@ -76,7 +76,7 @@ struct TASK{
 	int status;
 	int priority;
 	int level;
-	struct FIFO32 *buf;
+	struct FIFO32 *fifo32;
 };
 
 struct TASK_LEVEL{
@@ -194,6 +194,9 @@ void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
 void load_tr(int tr);
 void farjmp(int eip, int cs);
+
+
+
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -212,6 +215,7 @@ void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char co
 void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
 void create_windows8(unsigned char *buf,int xsize,int ysize,char *title, char act);
+void create_title_bar(unsigned char *buf,int xsize,char *title, char act);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 /*sheet.c*/
@@ -309,10 +313,10 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 /*mtask.c*/
 extern struct TIMER *mt_timer;
-struct TASK * mt_init(struct MEMMAN *man,struct FIFO32 *buf );
+struct TASK * mt_init(struct MEMMAN *man,struct FIFO32 *fifo32 );
 void mt_tastswitch(void);
 void mt_tastswitchsub(void);
-struct TASK* task_alloc(struct FIFO32 *buf);
+struct TASK* task_alloc(struct FIFO32 *fifo32);
 void task_run(struct TASK* task,int level, int priority);
 void task_sleep(struct TASK* task);
 void task_add(struct TASK* task);

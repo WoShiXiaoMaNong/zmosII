@@ -14,7 +14,7 @@ void task_idle(void)
 
 
 
-struct TASK *mt_init(struct MEMMAN *man,struct FIFO32 *buf )
+struct TASK *mt_init(struct MEMMAN *man,struct FIFO32 *fifo32 )
 {
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADDR_GDT;
 	taskctl = (struct TASK_CTL*)memman_alloc_4k(man, sizeof(struct TASK_CTL));
@@ -36,7 +36,7 @@ struct TASK *mt_init(struct MEMMAN *man,struct FIFO32 *buf )
 	
 	
 	taskctl->current_level = 0;
-	task = task_alloc(buf);
+	task = task_alloc(fifo32);
 	task->priority = 1;
 	task->level = 0;
 	task->status = TASK_STATUS_RUNNING;
@@ -63,7 +63,7 @@ struct TASK *mt_init(struct MEMMAN *man,struct FIFO32 *buf )
 }
 
 
-struct TASK* task_alloc(struct FIFO32 *buf)
+struct TASK* task_alloc(struct FIFO32 *fifo32)
 {
 	int i;
 	struct TASK *task;
@@ -90,7 +90,7 @@ struct TASK* task_alloc(struct FIFO32 *buf)
 			task->tss.ds = 0;
 			task->tss.fs = 0;
 			task->tss.gs = 0;
-			task->buf = buf;
+			task->fifo32 = fifo32;
 			return task;
 		}
 	}
