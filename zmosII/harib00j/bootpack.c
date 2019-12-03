@@ -2,7 +2,6 @@
 #include "bootpack.h"
 
 
-#define BUF_LENGTH 36
 extern struct TIMERCTL timerctl;
 extern struct TASK_CTL *taskctl;
 extern char keytable[];
@@ -11,7 +10,7 @@ extern char keytable[];
 
 
 
-void task_console(struct SHEET* sheet,struct FIFO32 *buff_fifo)
+void task_console(struct SHEET* sheet)
 {
 	
 	int cursor_x,cursor_y,cursor_h = 16;
@@ -19,6 +18,13 @@ void task_console(struct SHEET* sheet,struct FIFO32 *buff_fifo)
 	int init_cursor_x = 10;
 	cursor_x = 10;
 	cursor_y = 32;
+	
+	struct TASK *task = task_now();
+	int buff[BUF_LENGTH];
+	fifo32_init( &task->fifo32,buff,BUF_LENGTH,0);
+	struct FIFO32 *buff_fifo = &task->fifo32;
+	buff_fifo->task = task;
+	
 	
 	struct TIMER *timer_print = timer_alloc();
 	timer_init(timer_print,buff_fifo,2);
@@ -86,14 +92,18 @@ void task_console(struct SHEET* sheet,struct FIFO32 *buff_fifo)
 void task_b_main(struct SHEET* sheet)
 {
 	
-	struct FIFO32 buff_fifo;
-	int buff[BUF_LENGTH];
+	struct TASK *task = task_now();
+	char s[17];
 
-	fifo32_init(&buff_fifo,buff,BUF_LENGTH,0);
+	
+	int buff[BUF_LENGTH];
+	fifo32_init( &task->fifo32,buff,BUF_LENGTH,0);
+	struct FIFO32 *buff_fifo = &task->fifo32;
+	buff_fifo->task = task;
 	
 	
 	struct TIMER *timer_print = timer_alloc();
-	timer_init(timer_print,&buff_fifo,1);
+	timer_init(timer_print,buff_fifo,1);
 	
 	
 	
@@ -102,7 +112,7 @@ void task_b_main(struct SHEET* sheet)
 	int count = 0;
 	
 
-	char s[17];
+	
 
 	while(1)
 	{
@@ -111,11 +121,11 @@ void task_b_main(struct SHEET* sheet)
 		if(count <=0 ){
 			count = 0;
 		}
-		if( fifo32_status(&buff_fifo) == 0)  {
+		if( fifo32_status(buff_fifo) == 0)  {
 			io_sti();
 		}else{
 			
-			data = fifo32_get(&buff_fifo);
+			data = fifo32_get(buff_fifo);
 			io_sti();
 			
 			if(data == 1){
@@ -162,14 +172,16 @@ void HariMain(void)
 	
 	
 	/* 初始化 task 管理器 start*/
-	struct FIFO32 buff_mai;
-	struct FIFO32 *buff_main = &buff_mai;
-	int buff[BUF_LENGTH];
-	fifo32_init(buff_main,buff,BUF_LENGTH,0);
+	struct TASK *task_main = mt_init(man); 
 	
-	struct TASK *task_main = mt_init(man,buff_main); 
+	/*初始化主task*/
+	int buff[BUF_LENGTH];
+	fifo32_init(&task_main->fifo32,buff,BUF_LENGTH,0);
+	struct FIFO32 *buff_main = &task_main->fifo32;
 	buff_main->task = task_main;
 	/* 初始化 task 管理器 end*/
+	
+
 	
 	
 	
@@ -258,10 +270,7 @@ void HariMain(void)
 	
 	
 	/*创建子窗口用于多任务测试 */
-	
-	struct FIFO32 *buff_fifo_cons;
-	int buff_cons[BUF_LENGTH];
-	fifo32_init(buff_fifo_cons,buff_cons,BUF_LENGTH,0);
+
 	
 	
 	struct SHEET *sheet_windowsb;
@@ -272,11 +281,14 @@ void HariMain(void)
 	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
 	
 	
-	struct TASK *task_cons = task_alloc(buff_fifo_cons);
+	struct TASK *task_cons = task_alloc();
+	int buff1[BUF_LENGTH];
+	fifo32_init(&task_cons->fifo32,buff1,BUF_LENGTH,0);
+	
+	
 	int task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024; 
 	
 	*((int*)(task_b_esp + 4)) = (int)sheet_cons;
-	*((int*)(task_b_esp + 8)) = (int)buff_fifo_cons;
 	 
 	task_cons->tss.eip = (int) &task_console;
 	task_cons->tss.eflags = 0x00000202; /* IF = 1; */
@@ -288,11 +300,13 @@ void HariMain(void)
 	task_cons->tss.fs = 1 * 8;
 	task_cons->tss.gs = 1 * 8;
 	task_cons->priority = 1;
-	task_cons->fifo32 = buff_fifo_cons;
 	task_run(task_cons,1,0);
 	
 	
-	struct TASK *task2 = task_alloc(0);
+	struct TASK *task2 = task_alloc();
+	int buff2[BUF_LENGTH];
+	fifo32_init(&task2->fifo32,buff2,BUF_LENGTH,0);
+	
 	int task_c_esp;
 	
 	task_c_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024;
@@ -330,8 +344,15 @@ void HariMain(void)
 	sheet_slide(sheet_mouse, mx,my);
 	
 	while(1){
-		sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
+		
+		if(buff_main->task == task_main){
+			sprintf(s,"Time :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
 		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
+		}else{
+			sprintf(s,"Timm :%05ds %02d ms",timerctl.count / 100 , timerctl.count % 100);
+		putfont8_string_sht(sheet_windows,5,28,COL8_000000,COL8_C6C6C6 , s,18);
+		}
+		
 		
 		io_cli();
 		if( fifo32_status(buff_main) == 0){
@@ -398,7 +419,7 @@ void HariMain(void)
 				
 				//字符输入测试 >>>>开始<<<<
 				if(key_to == 1){
-					fifo32_put(task_cons->fifo32,data + 256);//(struct FIFO32 *fifo32,int data)
+					fifo32_put(&task_cons->fifo32,data + 256);//(struct FIFO32 *fifo32,int data)
 				}else{
 					if(data < 0x54){
 						if(keytable[data] != 0){
