@@ -71,9 +71,6 @@ void task_console(struct SHEET* sheet)
 					fifo32_put(buff_fifo,'>' + 256);
 					fifo32_put(buff_fifo,' ' + 256);
 				}else{
-					//if(data >= 'A' && data <= 'Z'){
-						//data += 0x20;
-					//}
 					s[0] = data;
 					s[1] = 0;
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, s,1);
@@ -146,8 +143,14 @@ void HariMain(void)
 {
 	
 	int key_to = 0; 
-	int shift_on = 0;
 	
+	/*
+	*	Left Shift on: 10b
+	*	Right Shift on: 01b
+	*/
+	int shift_on = 0;
+	int caps_lock = 0;
+	int leds = 0;
 	
 	
 	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
@@ -348,6 +351,10 @@ void HariMain(void)
 	sheet_slide(sheet_cons, 500,60);
 	sheet_slide(sheet_mouse, mx,my);
 	
+	
+	// 7 + 01111b
+	leds = (binfo->leds >> 4) & 7; 
+	caps_lock = leds &  4;
 	while(1){
 		
 		if(buff_main->task == task_main){
@@ -427,12 +434,14 @@ void HariMain(void)
 				//	fifo32_put(&task_cons->fifo32,data + 256);//(struct FIFO32 *fifo32,int data)
 				//}else{
 				if(data < 0x80){
-					if(shift_on == 1){
+					if(shift_on != 0 ){
 						s[0] = keytable1[data];
 					}else{
 						s[0] = keytable0[data];
 					}
-					
+					if( s[0] >= 'A' && s[0] <= 'Z' && caps_lock != 4){
+						s[0] += 0x20;
+					}
 					s[1] = 0;
 					
 					if(s[0] != 0){
@@ -446,13 +455,24 @@ void HariMain(void)
 					
 				}
 				
-				if(data == 0x2a){ //Shift on
-					shift_on = 1;
-				}
-				if(data == 0xaa){ //Shift off
-					shift_on = 0;
+				if(data == 0xba){ //Caps lock on
+					caps_lock ^= 4;
 				}
 				
+				if(data == 0x2a){ //Left Shift on
+					shift_on |= 2; //10b
+				}
+				if(data == 0xaa){ //Left Shift off
+					shift_on &= 1;  //01b
+				}
+				
+				if(data == 0x36){ //Right Shift on
+					shift_on |= 1; //01b
+				}
+				if(data == 0xb6){ //Right Shift off
+					shift_on &= 2;  //10b
+				}
+			
 				if(data == 0x0e){ //Key : Backspace
 					if(key_to == 1){
 						fifo32_put(&task_cons->fifo32,0x0e + 256);//(struct FIFO32 *fifo32,int data)
