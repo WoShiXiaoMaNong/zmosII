@@ -61,10 +61,10 @@ void task_console(struct SHEET* sheet)
 				//字符输入测试 >>>>开始<<<<
 				data = data - 256;
 				
-				if(data == 8){ //Key: Backspace
+				if(data == 0x0e){ //Key: Backspace
 					cursor_x -= 8;
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
-				}else if(data == 9){  //Key : Enter
+				}else if(data == 0x1c){  //Key : Enter
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 					cursor_y += 16;
 					cursor_x = init_cursor_x;
@@ -145,7 +145,10 @@ void task_b_main(struct SHEET* sheet)
 void HariMain(void)
 {
 	
-	int key_to = 0;
+	int key_to = 0; 
+	int shift_on = 0;
+	
+	
 	
 	int cursor_x = 12 ,cursor_y = 48,cursor_h = 16;
 	int cursor_color = COL8_000000;
@@ -423,21 +426,36 @@ void HariMain(void)
 				//if(key_to == 1){
 				//	fifo32_put(&task_cons->fifo32,data + 256);//(struct FIFO32 *fifo32,int data)
 				//}else{
-				if(data < 0x80 &&  keytable0[data] != 0){
-					s[0] = keytable0[data];
-					s[1] = 0;
-					if(key_to ==1){
-						fifo32_put(&task_cons->fifo32,s[0] + 256);//(struct FIFO32 *fifo32,int data)
+				if(data < 0x80){
+					if(shift_on == 1){
+						s[0] = keytable1[data];
 					}else{
-						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , s,1);
-						cursor_x += 8;
+						s[0] = keytable0[data];
+					}
+					
+					s[1] = 0;
+					
+					if(s[0] != 0){
+						if(key_to ==1){
+							fifo32_put(&task_cons->fifo32,s[0] + 256);//(struct FIFO32 *fifo32,int data)
+						}else{
+							putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , s,1);
+							cursor_x += 8;
+						}
 					}
 					
 				}
 				
+				if(data == 0x2a){ //Shift on
+					shift_on = 1;
+				}
+				if(data == 0xaa){ //Shift off
+					shift_on = 0;
+				}
+				
 				if(data == 0x0e){ //Key : Backspace
 					if(key_to == 1){
-						fifo32_put(&task_cons->fifo32,8 + 256);//(struct FIFO32 *fifo32,int data)
+						fifo32_put(&task_cons->fifo32,0x0e + 256);//(struct FIFO32 *fifo32,int data)
 					}else{
 						cursor_x -= 8;
 						putfont8_string_sht(sheet_windows,cursor_x, cursor_y,COL8_000000,COL8_FFFFFF , " ",1);
@@ -445,7 +463,7 @@ void HariMain(void)
 					
 				}
 				if(data == 0x1c){	//Key : Enter
-					fifo32_put(&task_cons->fifo32,9 + 256);//(struct FIFO32 *fifo32,int data)
+					fifo32_put(&task_cons->fifo32,0x1c + 256);//(struct FIFO32 *fifo32,int data)
 				}
 				boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
