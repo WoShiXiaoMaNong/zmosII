@@ -19,6 +19,10 @@ void task_console(struct SHEET* sheet)
 	int max_cursor_x = init_cursor_x + 8 * 35;
 	cursor_x = init_cursor_x;
 	cursor_y = init_cursor_y;
+	char command_line[36];
+	int command_line_index = 0;
+	command_line[command_line_index] = 0;
+	
 	
 	struct TASK *task = task_now();
 	int buff[BUF_LENGTH];
@@ -69,15 +73,18 @@ void task_console(struct SHEET* sheet)
 					}
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 				}else if(data == 0x1c){  //Key : Enter
+					command_line[command_line_index] = 0;
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 					cursor_y += 16;
+					
+					
 					if(cursor_y > max_cursor_y){
 						cursor_y = max_cursor_y;
 						
 						//Scroll start;
 						int i,j,k;
 						for(j = init_cursor_y; j <= cursor_y ; j++){
-							for(i = init_cursor_x + 8; i < sheet->bxsize ; i++){
+							for(i = init_cursor_x; i < sheet->bxsize ; i++){
 								sheet->buf[i + j * sheet->bxsize] = sheet->buf[i + (j + 16) * sheet->bxsize];
 							}
 						}							
@@ -87,15 +94,27 @@ void task_console(struct SHEET* sheet)
 							for(i = init_cursor_x; i < max_cursor_x + 8 ; i++){
 								sheet->buf[i + (j+ k) * sheet->bxsize] = COL8_000000;
 							}
-						}		
+						}	
+										
 						sheet_refresh(sheet, init_cursor_x,init_cursor_y,sheet->bxsize,cursor_y + 16);
 						//Scroll end;
 					}
+					
+					
 					cursor_x = init_cursor_x;
-					fifo32_put(buff_fifo,'>' + 256);
+					if(command_line_index> 0 ){
+						putfont8_string_sht(sheet,cursor_x , cursor_y,COL8_FFFFFF ,COL8_000000, command_line,command_line_index);	
+						fifo32_put(buff_fifo,0x1c+ 256);//New line.
+						command_line_index = 0;
+					}else{
+						fifo32_put(buff_fifo,'>' + 256);
+					}
+					
+					
 				}else{
 					s[0] = data;
 					s[1] = 0;
+					command_line[command_line_index ++] = data;
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, s,1);
 					cursor_x += 8;
 					if(cursor_x > max_cursor_x){
