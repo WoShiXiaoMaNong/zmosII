@@ -78,8 +78,8 @@ int fifo32_put(struct FIFO32 *fifo32,int data)
 	}
 	
 	if(fifo32->task != 0){
-		if(fifo32->task->status == TASK_STATUS_SLEEP){
-			task_run(fifo32->task);
+		if(fifo32->task->status != TASK_STATUS_RUNNING){
+			task_run(fifo32->task,-1,0);
 		}
 		
 	}

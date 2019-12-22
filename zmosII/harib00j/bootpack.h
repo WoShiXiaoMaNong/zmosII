@@ -49,13 +49,18 @@
 
 
 /* mtast.c */
-#define MAX_TASK	256
+#define MAX_TASK_LEV		10
+#define MAX_TASK_PER_LEV 	100
+#define MAX_TASK	(MAX_TASK_LEV * MAX_TASK_PER_LEV)
 #define TASK_GDT0   3
-#define TASK_STATUS_RUNNING		1
 #define TASK_STATUS_STOPED		0
+#define TASK_STATUS_RUNNING		1
 #define TASK_STATUS_FREE		2
 #define TASK_STATUS_ALLOCATED	3
 #define TASK_STATUS_SLEEP		4
+
+
+
 
 struct TSS32{
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
@@ -70,12 +75,21 @@ struct TASK{
 	int segment;
 	int status;
 	int priority;
+	int level;
+	struct FIFO32 *fifo32;
 };
-struct TASK_CTL{
-	struct TASK task0[MAX_TASK];
-	struct TASK *tasks[MAX_TASK];
+
+struct TASK_LEVEL{
 	int now;
 	int taskcount;
+	struct TASK *tasks[MAX_TASK_PER_LEV];
+};
+
+struct TASK_CTL{
+	struct TASK task0[MAX_TASK];
+	struct TASK_LEVEL task_levels[MAX_TASK_LEV];
+	int current_level;
+	char need_change_level;
 };
 
 
@@ -180,6 +194,9 @@ void asm_inthandler2c(void);
 int memtest_sub(unsigned start,unsigned end);
 void load_tr(int tr);
 void farjmp(int eip, int cs);
+
+
+
 //graphic.c
 void init_palette(void);
 void set_palette(int color_num_start, int color_num_end, unsigned char *rgb);
@@ -197,7 +214,8 @@ void putfont8_ascii(unsigned char *vram,int xsize,int x, int y,unsigned char col
 void putfont8_string(unsigned char *vram,int xsize,int x, int y,unsigned char color,unsigned char *msg);
 void putfont8_string_sht(struct SHEET *sht,int x, int y,unsigned char color,unsigned char back_ground_color, char *str,int strLength);
 void putblock8_8(unsigned char *vram,int vxsize,int block_x_size,int block_y_size,int px0,int py0, char *blockbuf,int bxsize);
-void create_windows8(unsigned char *buf,int xsize,int ysize,char *title);
+void create_windows8(unsigned char *buf,int xsize,int ysize,char *title, char act);
+void create_title_bar(unsigned char *buf,int xsize,char *title, char act);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 /*sheet.c*/
@@ -263,7 +281,7 @@ void init_pit(void);
 struct TIMER *timer_alloc(void);
 void timer_free(struct TIMER *timer);
 void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
-void ettime(struct TIMER *timer, unsigned int timeout);
+void settime(struct TIMER *timer, unsigned int timeout);
 void inthandler20(int *esp);
 
 /*mouse.c*/
@@ -293,11 +311,16 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 
 
+/*mtask.c*/
 extern struct TIMER *mt_timer;
-void mt_init(struct MEMMAN *man );
+struct TASK * mt_init(struct MEMMAN *man,struct FIFO32 *fifo32 );
 void mt_tastswitch(void);
-struct TASK* task_alloc(void);
-void task_run(struct TASK* task);
-void task_sleep(struct SHEET* sheet,struct TASK* task);
+void mt_tastswitchsub(void);
+struct TASK* task_alloc(struct FIFO32 *fifo32);
+void task_run(struct TASK* task,int level, int priority);
+void task_sleep(struct TASK* task);
+void task_add(struct TASK* task);
+void task_remove(struct TASK* task);
+struct TASK* task_now(void);
 
 #endif
