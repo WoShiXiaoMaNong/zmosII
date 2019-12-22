@@ -99,7 +99,7 @@ void task_console(struct SHEET* sheet)
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, s,1);
 					cursor_x += 8;
 					if(cursor_x > max_cursor_x){
-						fifo32_put(buff_fifo,0x1c+ 256);
+						fifo32_put(buff_fifo,0x1c+ 256);//New line.
 					}
 				}
 				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
@@ -249,7 +249,7 @@ void HariMain(void)
 	
 	
 	windows_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
-	create_windows8(windows_buf,160,80,"test window",1);
+	create_windows8(windows_buf,160,80,"Test Window",1);
 
 	
 	sheet_setbuf(sheet_back, back_buf, binfo->scrnx, binfo->scrny, -1);
@@ -311,7 +311,7 @@ void HariMain(void)
 	sheet_windowsb = sheet_alloc(sheetctl);
 	unsigned char *windowsb_buf;
 	windowsb_buf = (unsigned char*)memman_alloc_4k(man, 160 * 80);
-	create_windows8(windowsb_buf,160,80,"test window B",0);
+	create_windows8(windowsb_buf,160,80,"Test Window B",0);
 	sheet_setbuf(sheet_windowsb,windowsb_buf,160,80,-1);
 	
 	
