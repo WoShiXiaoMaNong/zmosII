@@ -290,7 +290,7 @@ void HariMain(void)
 	struct SHEET *sheet_cons;
 	sheet_cons = sheet_alloc(sheetctl);
 	unsigned char *cons_buf = (unsigned char*)memman_alloc_4k(man,180 * 320);
-	create_windows8(cons_buf,320,180,"console",0);
+	create_windows8(cons_buf,320,180,"Super Console",0);
 	sheet_setbuf(sheet_cons,cons_buf,320,180,99);
 	
 	make_textbox8(sheet_cons, 8,30,300,140,COL8_000000);
@@ -438,11 +438,11 @@ void HariMain(void)
 					
 					if(key_to == 0){
 						key_to = 1;
-						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"console", 1);
+						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"Super Console", 1);
 						create_title_bar(sheet_windows->buf,sheet_windows->bxsize,"test window", 0);
 					}else{
 						key_to = 0;
-						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"console", 0);
+						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"Super Console", 0);
 						create_title_bar(sheet_windows->buf,sheet_windows->bxsize, "test window", 1);
 					}
 					
