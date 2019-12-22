@@ -59,7 +59,41 @@
 #define TASK_STATUS_ALLOCATED	3
 #define TASK_STATUS_SLEEP		4
 
+#define BUF_LENGTH 36
 
+	static char keytable0[0x80] = {
+		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0x5c, 0,  0,   0,   0,   0,   0,   0,   0,   0,   0x5c, 0,  0
+	};
+	static char keytable1[0x80] = {
+		0,   0,   '!', '@', '#', '$', '%', '^', '&', '*','(', ')', '~', '=', '~', 0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', 0,   0,   '}', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', '<', '>', '?', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
+	};
+
+
+/*fifo.c*/
+struct FIFO8{
+	char *buf;
+	int p,q,size,free,flags;	
+};
+
+struct FIFO32{
+	int *buf;
+	int p,q,size,free,flags;	
+	struct TASK* task;
+};
 
 
 struct TSS32{
@@ -76,7 +110,7 @@ struct TASK{
 	int status;
 	int priority;
 	int level;
-	struct FIFO32 *fifo32;
+	struct FIFO32 fifo32; 
 };
 
 struct TASK_LEVEL{
@@ -124,17 +158,6 @@ struct GATE_DESCRIPTOR{
 
 
 
-/*fifo.c*/
-struct FIFO8{
-	char *buf;
-	int p,q,size,free,flags;	
-};
-
-struct FIFO32{
-	int *buf;
-	int p,q,size,free,flags;	
-	struct TASK* task;
-};
 /*memory.c*/
 struct FREEINFO{
 	unsigned int addr,size;
@@ -313,10 +336,10 @@ unsigned int memtest(unsigned int start, unsigned int end);
 
 /*mtask.c*/
 extern struct TIMER *mt_timer;
-struct TASK * mt_init(struct MEMMAN *man,struct FIFO32 *fifo32 );
+struct TASK * mt_init(struct MEMMAN *man);
 void mt_tastswitch(void);
 void mt_tastswitchsub(void);
-struct TASK* task_alloc(struct FIFO32 *fifo32);
+struct TASK* task_alloc(void);
 void task_run(struct TASK* task,int level, int priority);
 void task_sleep(struct TASK* task);
 void task_add(struct TASK* task);
