@@ -14,8 +14,11 @@ void task_console(struct SHEET* sheet)
 	int cursor_x,cursor_y,cursor_h = 16;
 	int cursor_color = COL8_000000;
 	int init_cursor_x = 10;
-	cursor_x = 10;
-	cursor_y = 32;
+	int init_cursor_y = 32;
+	int max_cursor_y = init_cursor_y + 16 * 7;
+	int max_cursor_x = init_cursor_x + 8 * 35;
+	cursor_x = init_cursor_x;
+	cursor_y = init_cursor_y;
 	
 	struct TASK *task = task_now();
 	int buff[BUF_LENGTH];
@@ -32,7 +35,6 @@ void task_console(struct SHEET* sheet)
 	int count = 0;
 	char s[20];
 	fifo32_put(buff_fifo,'>' + 256);
-	fifo32_put(buff_fifo,' ' + 256);
 	while(1)
 	{
 		io_cli();
@@ -62,19 +64,43 @@ void task_console(struct SHEET* sheet)
 				data = data - 256;
 				
 				if(data == 0x0e){ //Key: Backspace
-					cursor_x -= 8;
+					if(cursor_x > init_cursor_x + 8){
+						cursor_x -= 8;
+					}
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 				}else if(data == 0x1c){  //Key : Enter
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 					cursor_y += 16;
+					if(cursor_y > max_cursor_y){
+						cursor_y = max_cursor_y;
+						
+						//Scroll start;
+						int i,j,k;
+						for(j = init_cursor_y; j <= cursor_y ; j++){
+							for(i = init_cursor_x + 8; i < sheet->bxsize ; i++){
+								sheet->buf[i + j * sheet->bxsize] = sheet->buf[i + (j + 16) * sheet->bxsize];
+							}
+						}							
+						
+						//Clean the last line.
+						for(k = 0; k <=16 ; k++){
+							for(i = init_cursor_x; i < max_cursor_x + 8 ; i++){
+								sheet->buf[i + (j+ k) * sheet->bxsize] = COL8_000000;
+							}
+						}		
+						sheet_refresh(sheet, init_cursor_x,init_cursor_y,sheet->bxsize,cursor_y + 16);
+						//Scroll end;
+					}
 					cursor_x = init_cursor_x;
 					fifo32_put(buff_fifo,'>' + 256);
-					fifo32_put(buff_fifo,' ' + 256);
 				}else{
 					s[0] = data;
 					s[1] = 0;
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, s,1);
 					cursor_x += 8;
+					if(cursor_x > max_cursor_x){
+						fifo32_put(buff_fifo,0x1c+ 256);
+					}
 				}
 				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				//字符输入测试 >>>>结束<<<<
@@ -440,7 +466,7 @@ void HariMain(void)
 						s[0] = keytable0[data];
 					}
 					if( s[0] >= 'A' && s[0] <= 'Z' && caps_lock != 4){
-						s[0] += 0x20;
+						s[0] += 0x20; // 大写字母转小写字母
 					}
 					s[1] = 0;
 					
