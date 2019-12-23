@@ -12,7 +12,7 @@ void task_console(struct SHEET* sheet)
 {
 	
 	int cursor_x,cursor_y,cursor_h = 16;
-	int cursor_color = COL8_000000;
+	int cursor_color = -1;
 	int init_cursor_x = 10;
 	int init_cursor_y = 32;
 	int max_cursor_y = init_cursor_y + 16 * 7;
@@ -53,16 +53,22 @@ void task_console(struct SHEET* sheet)
 			data = fifo32_get(buff_fifo);
 			io_sti();
 			
-			
-			if(data == 2){
-				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
+			if(data == 0){
+				cursor_color = -1;
+			}if(data == 1){
+				cursor_color = COL8_000000;
+			}else if(data == 2){
 				settime(timer_print,50);
 				timer_init(timer_print,buff_fifo,3);
-				
+				if(cursor_color >=0 ){
+					cursor_color =  COL8_000000;
+				}
 			}else if(data == 3){
-				boxfill8(sheet->buf,sheet->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				settime(timer_print,50);
 				timer_init(timer_print,buff_fifo,2);
+				if(cursor_color >=0 ){
+					cursor_color =  COL8_FFFFFF;
+				}
 			}else if( data >= 256 && data <512 ){  /* 键盘输入*/
 				//字符输入测试 >>>>开始<<<<
 				data = data - 256;
@@ -125,6 +131,7 @@ void task_console(struct SHEET* sheet)
 				//字符输入测试 >>>>结束<<<<
 				
 			};
+			boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 			sheet_refresh(sheet, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 			
 			
@@ -437,16 +444,19 @@ void HariMain(void)
 					};
 					
 				}else if ( data == 2 || data == 3){  //光标控制
+					settime(timer2,50);
 					if(data == 2){
-						boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-						settime(timer2,50);
 						timer_init(timer2,buff_main,3);
-						
+						if(cursor_color >=0){
+							cursor_color = COL8_000000;
+						}
 					}else{
-						boxfill8(sheet_windows->buf,sheet_windows->bxsize, COL8_FFFFFF,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
-						settime(timer2,50);
+						if(cursor_color >=0){
+							cursor_color = COL8_FFFFFF;
+						}
 						timer_init(timer2,buff_main,2);
 					};
+					boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 					sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				}
 				
@@ -459,10 +469,14 @@ void HariMain(void)
 						key_to = 1;
 						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"Super Console", 1);
 						create_title_bar(sheet_windows->buf,sheet_windows->bxsize,"test window", 0);
+						cursor_color = -1; // 隐藏主界面的光标
+						fifo32_put(&task_cons->fifo32,1);//通知console task ,显示光标。
 					}else{
 						key_to = 0;
 						create_title_bar(sheet_cons->buf,sheet_cons->bxsize,"Super Console", 0);
 						create_title_bar(sheet_windows->buf,sheet_windows->bxsize, "test window", 1);
+						cursor_color = COL8_000000; // 显示主界面的光标
+						fifo32_put(&task_cons->fifo32,0);//通知console task ,隐藏光标。
 					}
 					
 					sheet_refresh(sheet_cons, 0,0,sheet_cons->bxsize, sheet_cons->bysize);
