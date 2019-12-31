@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "bootpack.h"
 
 
@@ -6,11 +7,39 @@ extern struct TIMERCTL timerctl;
 extern struct TASK_CTL *taskctl;
 
 
-
-
-void task_console(struct SHEET* sheet)
+int new_line(struct SHEET* sheet,int init_cursor_x,int init_cursor_y ,int current_cursor_y, int max_cursor_y,int max_cursor_x,int line_size)
 {
-	
+	if(current_cursor_y < max_cursor_y){
+		current_cursor_y += line_size;
+	}else{
+		current_cursor_y = max_cursor_y;
+		
+		//Scroll start;
+		int i,j,k;
+		for(j = init_cursor_y; j <= current_cursor_y ; j++){
+			for(i = init_cursor_x; i < sheet->bxsize ; i++){
+				sheet->buf[i + j * sheet->bxsize] = sheet->buf[i + (j + 16) * sheet->bxsize];
+			}
+		}							
+		
+		//Clean the last line.
+		for(k = 0; k <=16 ; k++){
+			for(i = init_cursor_x; i < max_cursor_x + 8 ; i++){
+				sheet->buf[i + (j+ k) * sheet->bxsize] = COL8_000000;
+			}
+		}	
+						
+		sheet_refresh(sheet, init_cursor_x,init_cursor_y,sheet->bxsize,current_cursor_y + 16);
+		//Scroll end;
+	}
+	return current_cursor_y;
+}
+
+
+
+void task_console(struct SHEET* sheet,int mem_total)
+{
+	struct MEMMAN *man = (struct MEMMAN *) MEMMAN_ADDR;
 	int cursor_x,cursor_y,cursor_h = 16;
 	int cursor_color = -1;
 	int init_cursor_x = 10;
@@ -37,7 +66,7 @@ void task_console(struct SHEET* sheet)
 	settime(timer_print,2);
 	int data;
 	int count = 0;
-	char s[20];
+	char s[200];
 	fifo32_put(buff_fifo,'>' + 256);
 	while(1)
 	{
@@ -80,42 +109,34 @@ void task_console(struct SHEET* sheet)
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
 				}else if(data == 0x1c){  //Key : Enter
 					command_line[command_line_index] = 0;
+					
 					putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, " ",1);
-					cursor_y += 16;
-					
-					
-					if(cursor_y > max_cursor_y){
-						cursor_y = max_cursor_y;
-						
-						//Scroll start;
-						int i,j,k;
-						for(j = init_cursor_y; j <= cursor_y ; j++){
-							for(i = init_cursor_x; i < sheet->bxsize ; i++){
-								sheet->buf[i + j * sheet->bxsize] = sheet->buf[i + (j + 16) * sheet->bxsize];
-							}
-						}							
-						
-						//Clean the last line.
-						for(k = 0; k <=16 ; k++){
-							for(i = init_cursor_x; i < max_cursor_x + 8 ; i++){
-								sheet->buf[i + (j+ k) * sheet->bxsize] = COL8_000000;
-							}
-						}	
-										
-						sheet_refresh(sheet, init_cursor_x,init_cursor_y,sheet->bxsize,cursor_y + 16);
-						//Scroll end;
-					}
-					
+					cursor_y = new_line(sheet,init_cursor_x,init_cursor_y ,cursor_y, max_cursor_y,max_cursor_x,16);
 					
 					cursor_x = init_cursor_x;
-					if(command_line_index> 0 ){
-						putfont8_string_sht(sheet,cursor_x , cursor_y,COL8_FFFFFF ,COL8_000000, command_line,command_line_index);	
-						fifo32_put(buff_fifo,0x1c+ 256);//New line.
-						command_line_index = 0;
-					}else{
-						fifo32_put(buff_fifo,'>' + 256);
-					}
 					
+					if(command_line_index> 0 ){
+						if(strcmp(command_line,"mem") == 0){
+							sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
+							putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF,COL8_000000 , s,strlen(s));
+							cursor_y = new_line(sheet,init_cursor_x,init_cursor_y ,cursor_y, max_cursor_y,max_cursor_x,16);	
+							
+							sprintf(s,"Total Memory : %dMB",mem_total / 1024 / 1024);
+							putfont8_string_sht(sheet,cursor_x, cursor_y,COL8_FFFFFF,COL8_000000 , s,strlen(s));
+							cursor_x += strlen(s) * 8;
+							cursor_y = new_line(sheet,init_cursor_x,init_cursor_y ,cursor_y, max_cursor_y,max_cursor_x,16);	
+							fifo32_put(buff_fifo,0x1c+ 256);//New line.
+						}else{
+							putfont8_string_sht(sheet,cursor_x , cursor_y,COL8_FFFFFF ,COL8_000000, "Not a command",13);
+							cursor_x += 13 * 8;							
+							fifo32_put(buff_fifo,0x1c+ 256);//New line.
+						}
+						command_line_index = 0;
+						command_line[0] = 0;
+					}else{
+						putfont8_string_sht(sheet,init_cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, ">",1);
+						cursor_x += 8;
+					}
 					
 				}else{
 					s[0] = data;
@@ -127,7 +148,6 @@ void task_console(struct SHEET* sheet)
 						fifo32_put(buff_fifo,0x1c+ 256);//New line.
 					}
 				}
-				boxfill8(sheet->buf,sheet->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				//字符输入测试 >>>>结束<<<<
 				
 			};
@@ -298,12 +318,12 @@ void HariMain(void)
 	
 	
 	/*输出内存使用信息*/
-	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
-	putfont8_string_sht(sheet_back,0, 32,COL8_FF0000,COL8_008484 , s,20);
-	putfont8_string_sht(sheet_back,0, 16,COL8_FF0000,COL8_008484 , "testset",20);
+//	sprintf(s,"Free Memory : %dKB",memman_total(man)/ 1024);
+//	putfont8_string_sht(sheet_back,0, 32,COL8_FF0000,COL8_008484 , s,20);
+//	putfont8_string_sht(sheet_back,0, 16,COL8_FF0000,COL8_008484 , "testset",20);
 	//putfont8_string(back_buf,binfo->scrnx,0,32,COL8_FF0000,s );	
-	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
-	sprintf(s,"Total Memory : %dMB",memsize);
+//	int memsize = memtest(0x00400000,0xbfffffff) / 1024 / 1024;
+//	sprintf(s,"Total Memory : %dMB",memsize);
 	
 	//putfont8_string(back_buf,binfo->scrnx,0,50,COL8_FFFFFF,s );
 	putfont8_string_sht(sheet_back,0, 50,COL8_FFFFFF,COL8_008484 , s,20);
@@ -349,7 +369,7 @@ void HariMain(void)
 	int task_b_esp = memman_alloc_4k(man, 64 * 1024) + 64 * 1024; 
 	
 	*((int*)(task_b_esp + 4)) = (int)sheet_cons;
-	 
+	*((int*)(task_b_esp + 8)) = mem_total;
 	task_cons->tss.eip = (int) &task_console;
 	task_cons->tss.eflags = 0x00000202; /* IF = 1; */
 	task_cons->tss.esp = task_b_esp;
