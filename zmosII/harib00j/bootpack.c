@@ -34,6 +34,17 @@ int new_line(struct SHEET* sheet,int init_cursor_x,int init_cursor_y ,int curren
 	}
 	return current_cursor_y;
 }
+void cls(struct SHEET* sheet,int init_cursor_x,int init_cursor_y ,int max_cursor_x,int max_cursor_y,int back_color)
+{
+	
+	int i,j;
+	for(j = init_cursor_y; j <= max_cursor_x ; j++){
+		for(i = init_cursor_x; i <= max_cursor_x ; i++){
+			sheet->buf[i + j * sheet->bxsize] = back_color;
+		}
+	}
+	sheet_refresh(sheet, init_cursor_x,init_cursor_y,max_cursor_x,max_cursor_y);
+}
 
 
 
@@ -126,6 +137,12 @@ void task_console(struct SHEET* sheet,int mem_total)
 							cursor_x += strlen(s) * 8;
 							cursor_y = new_line(sheet,init_cursor_x,init_cursor_y ,cursor_y, max_cursor_y,max_cursor_x,16);	
 							fifo32_put(buff_fifo,0x1c+ 256);//New line.
+						}else if(strcmp(command_line,"cls") == 0){
+							cls(sheet, init_cursor_x, init_cursor_y , max_cursor_x + 8, max_cursor_y, COL8_000000);
+							cursor_x = init_cursor_x;
+							cursor_y = init_cursor_y;
+							putfont8_string_sht(sheet,init_cursor_x, cursor_y,COL8_FFFFFF ,COL8_000000, ">",1);
+							cursor_x += 8;
 						}else{
 							putfont8_string_sht(sheet,cursor_x , cursor_y,COL8_FFFFFF ,COL8_000000, "Not a command",13);
 							cursor_x += 13 * 8;							
