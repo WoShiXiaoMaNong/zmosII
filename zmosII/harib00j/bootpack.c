@@ -579,7 +579,9 @@ void HariMain(void)
 					
 				}
 				if(data == 0x1c){	//Key : Enter
-					fifo32_put(&task_cons->fifo32,0x1c + 256);//(struct FIFO32 *fifo32,int data)
+					if(key_to == 1){
+						fifo32_put(&task_cons->fifo32,0x1c + 256);//(struct FIFO32 *fifo32,int data)
+					}
 				}
 				boxfill8(sheet_windows->buf,sheet_windows->bxsize, cursor_color,cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
 				sheet_refresh(sheet_windows, cursor_x,cursor_y,cursor_x,cursor_y + cursor_h);
